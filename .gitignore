@@ -2,4 +2,7 @@ build/
 target/
 project/
 verilog/
+.metals/
+.vscode/
+.bloop/
 src/main/scala/Icache/README.md
