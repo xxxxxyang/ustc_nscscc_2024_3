@@ -9,7 +9,7 @@ lazy val root = (project in file("."))
     name := "SW_ChaohuLight",
     libraryDependencies ++= Seq(
         "org.chipsalliance" %% "chisel" % chiselVersion,
-        "edu.berkeley.cs" %% "chiseltest" % chiselVersion
+        // "edu.berkeley.cs" %% "chiseltest" % chiselVersion
     ),
     scalacOptions ++= Seq(
         "-language:reflectiveCalls",
@@ -18,7 +18,7 @@ lazy val root = (project in file("."))
         "-Xcheckinit",
         "-Ymacro-annotations",
         "-opt:inline:**",
-        "-P:chiselplugin:genBundleElements",
+        // "-P:chiselplugin:genBundleElements",
     ),
     addCompilerPlugin("org.chipsalliance" % "chisel-plugin" % chiselVersion cross CrossVersion.full),
     )

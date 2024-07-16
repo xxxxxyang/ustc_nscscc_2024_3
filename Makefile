@@ -7,6 +7,7 @@ verilog: $(SCALA_SRCS)
 	@mkdir -p $(WORK_DIR)/verilog
 	@rm -rf $(WORK_DIR)/verilog/*
 	@sbt "runMain CPU_Main" -Dmode=$(MODE) --batch
+	@sbt "runMain Cache_Main" -Dmode=$(MODE) --batch
 
 clean-verilog:
 	@rm -rf $(WORK_DIR)/verilog
