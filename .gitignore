@@ -2,3 +2,6 @@ build/
 target/
 project/
 verilog/
+.metals/
+.vscode/
+.bloop/
