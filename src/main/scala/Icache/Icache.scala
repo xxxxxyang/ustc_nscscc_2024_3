@@ -43,7 +43,7 @@ class Icache_IO extends Bundle {
     val stall                   = Input(Bool())             // CPU stall
 }
 
-import Icache_Config._                              // 宏定义
+import Icache_Config._                                      // 宏定义
 class Icache extends Module{
     // io
     val io                      = IO(new Icache_IO)
@@ -56,12 +56,12 @@ class Icache extends Module{
 
     /* TAG BRAM */
     val tag_BRAM                = VecInit.fill(2)(Module(new xilinx_single_port_ram_no_change(TAG_WIDTH + 1, INDEX_DEPTH)).io)      // BRAM 2*20b*128
-    val valid_IF                = VecInit.tabulate(2)(i => tag_BRAM(i).douta(TAG_WIDTH))                                  // valid bit
-    val tag_IF                  = VecInit.tabulate(2)(i => tag_BRAM(i).douta(TAG_WIDTH - 1, 0))                           // tag  19bit
+    val valid_IF                = VecInit.tabulate(2)(i => tag_BRAM(i).douta(TAG_WIDTH))                                            // valid bit
+    val tag_IF                  = VecInit.tabulate(2)(i => tag_BRAM(i).douta(TAG_WIDTH - 1, 0))                                     // tag  19bit
 
     /* Cache MEM */
     val cmem                    = VecInit.fill(2)(Module(new xilinx_single_port_ram_no_change(8 * OFFSET_DEPTH, INDEX_DEPTH)).io)   // BRAM 2*64B*128
-    val cmem_line_IF            = VecInit.tabulate(2)(i => cmem(i).douta(8 * OFFSET_DEPTH - 1, 0))                        // inst_line 64B
+    val cmem_line_IF            = VecInit.tabulate(2)(i => cmem(i).douta(8 * OFFSET_DEPTH - 1, 0))                                  // inst_line 64B
 
     // IF-RM SEGREG
     val paddr_reg               = RegInit(0.U(32.W))        // 物理地址
@@ -102,9 +102,9 @@ class Icache extends Module{
     }
 
     /* return buf */
-    val rbuf                    = RegInit(0.U((8 * OFFSET_DEPTH).W))    // 内存数据返回缓冲区
-    val rbuf_inst               = RegInit(0.U(32.W))                    // 单次内存数据返回缓冲
-    val rready                  = ShiftRegister(io.i_rready, 1)         // 总线数据准备好
+    val rbuf                    = RegInit(0.U((8 * OFFSET_DEPTH).W))                    // 内存数据返回缓冲区
+    val rbuf_inst               = RegInit(0.U(32.W))                                    // 单次内存数据返回缓冲
+    val rready                  = ShiftRegister(io.i_rready, 1)                         // 总线数据准备好
     cnt_en                      := rready
     // 从总线读取数据放入return buf
     when(io.i_rready){
@@ -126,23 +126,23 @@ class Icache extends Module{
     }
     /* read/write cmem */
     for(i <- 0 until 2){
-        cmem(i).addra           := Mux(addr_sel === FROM_PIPE, index_IF, index_RM)          // 2选1选择器 当在IF阶段时，为状态idle，addr_sel为from_pipe，从BRAM中读取指令，否则即miss，准备向miss的cache line写入指令
-        cmem(i).dina            := rbuf                                                     // 写入返回缓冲区数据 dina为写入数据
+        cmem(i).addra           := Mux(addr_sel === FROM_PIPE, index_IF, index_RM)      // 2选1选择器 当在IF阶段时，为状态idle，addr_sel为from_pipe，从BRAM中读取指令，否则即miss，准备向miss的cache line写入指令
+        cmem(i).dina            := rbuf                                                 // 写入返回缓冲区数据 dina为写入数据
         cmem(i).clka            := clock
         cmem(i).wea             := cmem_we(i)
     }
 
 
     /* hit */
-    val cache_hit               = WireDefault(false.B)                  // cache命中
+    val cache_hit               = WireDefault(false.B)                                  // cache命中
     val cache_hit_oh            = VecInit.tabulate(2)(i => valid_IF(i) && tag_IF(i) === tag_RM)             // cache line向量的独热码
-    val cache_hit_line          = OHToUInt(cache_hit_oh)                // 命中的cache line序号（cmem[0]或cmem[1]），若未命中则为0
+    val cache_hit_line          = OHToUInt(cache_hit_oh)                                // 命中的cache line序号（cmem[0]或cmem[1]），若未命中则为0
     cache_hit                   := cache_hit_line.orR
     cache_miss_RM               := !cache_hit
 
 
     /* cache mem read */
-    val cmem_hit_line           = Mux1H(cache_hit_oh, cmem_line_IF)     // 命中的cache line
+    val cmem_hit_line           = Mux1H(cache_hit_oh, cmem_line_IF)                     // 命中的cache line
     val cmem_hit_group          = VecInit.tabulate(OFFSET_DEPTH/4)(i => if(i == OFFSET_DEPTH/4-1) 0.U(32.W) ## cmem_hit_line(32*i+31, 32*i) else cmem_hit_line(32*i+63, 32*i))
     val cmem_rdata              = cmem_hit_group(offset_RM(OFFSET_WIDTH - 1, 2))        // 从cache line中根据偏移取出两条指令
 
@@ -155,15 +155,15 @@ class Icache extends Module{
 
 
     // lru
-    val lru                     = RegInit(VecInit.fill(INDEX_DEPTH)(0.U(1.W)))      // lru寄存器堆  128*1bit
+    val lru                     = RegInit(VecInit.fill(INDEX_DEPTH)(0.U(1.W)))          // lru寄存器堆  128*1bit
     val lru_hit_upd             = WireDefault(false.B)
     val lru_miss_upd            = WireDefault(false.B)
-    val lru_sel                 = lru(index_RM)                                     // 选中的cache line序号 0,1
+    val lru_sel                 = lru(index_RM)                                         // 选中的cache line序号 0,1
 
     when(lru_hit_upd){
-        lru(index_RM)           := !cache_hit_line  // 更新为非命中的cache line序号
+        lru(index_RM)           := !cache_hit_line                                      // 更新为非命中的cache line序号
     }.elsewhen(lru_miss_upd){
-        lru(index_RM)           := !lru_sel         // 更新为未被替换的cache line序号
+        lru(index_RM)           := !lru_sel                                             // 更新为未被替换的cache line序号
     }
 
 
@@ -171,7 +171,7 @@ class Icache extends Module{
     val s_idle :: s_miss :: s_refill :: s_wait :: Nil = Enum(4)
     val state                   = RegInit(s_idle)
     val inst_valid              = WireDefault(false.B)
-    val read_finish             = ShiftRegister(io.i_rlast && rready, 1)                      // 从内存替换cache完成
+    val read_finish             = ShiftRegister(io.i_rlast && rready, 1)                // 从内存替换cache完成 ? rready有必要吗
 
     switch(state){
         is(s_idle){
