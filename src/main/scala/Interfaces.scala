@@ -9,10 +9,10 @@ object Interfaces {
     class DP_to_ROB() extends Bundle{
         val exception   = Output(UInt(8.W))              // 前端产生的异常
         val typ         = Output(UInt(2.W))              // 类型 (store, br, .. )
-        val areg        = Output(UInt(5.W))              // 目的逻辑寄存器 (rd)
-        val areg_v      = Output(Bool())                 // 是否写
-        val preg        = Output(UInt(PREG_W.W))       // 物理寄存器
-        val opreg       = Output(UInt(PREG_W.W))       // 原物理寄存器
+        val rd          = Output(UInt(5.W))              // 目的逻辑寄存器 (rd)
+        val rd_valid    = Output(Bool())                 // 是否写
+        val prd         = Output(UInt(PREG_W.W))         // 物理寄存器
+        val pprd        = Output(UInt(PREG_W.W))         // 原物理寄存器
         val pc          = Output(UInt(32.W))             
         val rob_index   = Input(UInt(ROB_W.W))
     }
@@ -29,8 +29,8 @@ object Interfaces {
 
     class ROB_to_ARAT() extends Bundle{
         val commit_en   = Bool()
-        val areg_v      = Bool()
-        val preg        = UInt(PREG_W.W)
-        val opreg       = UInt(PREG_W.W)
+        val rd_valid    = Bool()
+        val prd         = UInt(PREG_W.W)
+        val pprd        = UInt(PREG_W.W)
     }
 }
