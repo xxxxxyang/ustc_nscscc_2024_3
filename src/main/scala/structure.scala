@@ -3,7 +3,7 @@ import chisel3.util._
 
 
 object RAT {
-    class rat_t extends Boudle {
+    class rat_t extends Bundle {
         val arch_reg = UInt(5.W)
         val valif = Bool()
     }

@@ -19,7 +19,7 @@ class CRAT(n:Int) extends Module {
 
     })
 
-    import Rat._
+    import RAT._
     val rat = RegInit(VecInit.fill(n)(0.U.asTypeOf(new rat_t))) //创建CRAT表
 
     //更新CRAT
