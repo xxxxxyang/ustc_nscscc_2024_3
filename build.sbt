@@ -9,7 +9,7 @@ lazy val root = (project in file("."))
     name := "SW_ChaohuLight",
     libraryDependencies ++= Seq(
         "org.chipsalliance" %% "chisel" % chiselVersion,
-        // "edu.berkeley.cs" %% "chiseltest" % chiselVersion
+        "edu.berkeley.cs" %% "chiseltest" % "6.0.0"
     ),
     scalacOptions ++= Seq(
         "-language:reflectiveCalls",
