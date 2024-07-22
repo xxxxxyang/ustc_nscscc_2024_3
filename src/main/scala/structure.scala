@@ -64,4 +64,15 @@ object control_signal{
     val CACHE_OP = 0x401.U(13.W)  // bit 10
     val LS_LL    = 0x801.U(13.W)  // bit 11
     val LS_SC    = 0x1001.U(13.W) // bit 12
+
+    // mem_type
+    val NO_MEM   = 0.U(5.W)
+    val LDB      = 0x10.U(5.W)
+    val LDH      = 0x11.U(5.W)
+    val LDW      = 0x12.U(5.W)
+    val STB      = 0x14.U(5.W)
+    val STH      = 0x15.U(5.W)
+    val STW      = 0x16.U(5.W)
+    val LDBU     = 0x18.U(5.W)
+    val LDHU     = 0x19.U(5.W)    
 }
