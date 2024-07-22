@@ -24,7 +24,7 @@ class Icache_IO extends Bundle {
 
     // RM
     /* output */
-    val inst                    = Output(UInt(32.W))        // 指令
+    val inst                    = Output(Vec(2, UInt(32.W)))// 指令
     val inst_valid              = Output(Bool())            // 指令有效
 
     // AXI
@@ -151,7 +151,7 @@ class Icache extends Module{
     val rbuf_rdata              = rbuf_hit_group(offset_RM(OFFSET_WIDTH - 1, 2))        // 从return buf中根据偏移取出两条指令
 
     /* CPU rdata */
-    val rdata                   = Mux(data_sel === FROM_CMEM, cmem_rdata, rbuf_rdata)   // 选择数据来源
+    val rdata                   = VecInit.tabulate(2)(i => (Mux(data_sel === FROM_CMEM, cmem_rdata(32*i+31, 32*i), rbuf_rdata(32*i+31, 32*i))))   // 选择数据来源
 
 
     // lru
