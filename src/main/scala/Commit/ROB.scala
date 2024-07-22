@@ -13,10 +13,10 @@ import Util.wrap
 class ROB_Item() extends Bundle{
     val exception   = UInt(8.W)
     val typ         = UInt(2.W)              // 类型 (store, br, .. ) 
-    val areg        = UInt(5.W)              // 目的逻辑寄存器 (rd)
-    val areg_v      = Bool()                 // 是否写
-    val preg        = UInt(PREG_W.W)       // 物理寄存器
-    val opreg       = UInt(PREG_W.W)       // 原物理寄存器
+    val rd          = UInt(5.W)              // 目的逻辑寄存器 (rd)
+    val rd_valid    = Bool()                 // 是否写
+    val prd         = UInt(PREG_W.W)         // 物理寄存器
+    val pprd        = UInt(PREG_W.W)         // 原物理寄存器
     val pc          = UInt(32.W)          
     val complete    = Bool()
 }
@@ -24,11 +24,12 @@ class ROB_Item() extends Bundle{
 class ROB() extends Module{
     val io = IO(new Bundle{
         //约定：发不出2条指令就全别发，dp_valid = 0
-        val dp_valid = Input(Bool())                    // dp 有效
-        val dp = Vec(2, Flipped(new DP_to_ROB))
-        val wb = Vec(4, Input(new WB_to_ROB))
-        val predict_fail = Input(Bool())
-        val arat = Vec(2, Output(new ROB_to_ARAT))
+        val dp_valid        = Input(Bool())                    // dp 有效
+        val dp              = Vec(2, Flipped(new DP_to_ROB))
+        val wb              = Input(Vec(4, new WB_to_ROB))
+        val arat            = Output(Vec(2, new ROB_to_ARAT))
+        val predict_fail    = Input(Bool())
+        val full            = Output(Bool())
     })
 
     //rob表 2*(ROB_SIZE/2)
@@ -47,10 +48,10 @@ class ROB() extends Module{
         when(io.dp_valid) {
             rob(i)(tail).exception := io.dp(i).exception
             rob(i)(tail).typ       := io.dp(i).typ
-            rob(i)(tail).areg      := io.dp(i).areg
-            rob(i)(tail).areg_v    := io.dp(i).areg_v
-            rob(i)(tail).preg      := io.dp(i).preg
-            rob(i)(tail).opreg     := io.dp(i).opreg
+            rob(i)(tail).rd        := io.dp(i).rd
+            rob(i)(tail).rd_valid  := io.dp(i).rd_valid
+            rob(i)(tail).prd       := io.dp(i).prd
+            rob(i)(tail).pprd      := io.dp(i).pprd
             rob(i)(tail).pc        := io.dp(i).pc
             rob(i)(tail).complete  := false.B
             io.dp(i).rob_index := Cat(tail, i.U)
@@ -84,9 +85,9 @@ class ROB() extends Module{
     //将管理寄存器的操作交给ARAT
     for(i <- 0 until 2) {
         io.arat(i).commit_en := commit_en(i)
-        io.arat(i).areg_v    := rob(col(i))(row(i)).areg_v
-        io.arat(i).preg      := rob(col(i))(row(i)).preg
-        io.arat(i).opreg     := rob(col(i))(row(i)).opreg
+        io.arat(i).rd_valid  := rob(col(i))(row(i)).rd_valid
+        io.arat(i).prd       := rob(col(i))(row(i)).prd
+        io.arat(i).pprd      := rob(col(i))(row(i)).pprd
     }
     head := wrap(head +& PopCount(commit_en), ROB_SIZE.U)
     
