@@ -1,14 +1,6 @@
 import chisel3._
 import chisel3.util._
 
-
-object RAT {
-    class rat_t extends Boudle {
-        val arch_reg = UInt(5.W)
-        val valif = Bool()
-    }
-}
-
 object control_signal{
     //alu op code
     val OP_ADD = 0.U(4.W)

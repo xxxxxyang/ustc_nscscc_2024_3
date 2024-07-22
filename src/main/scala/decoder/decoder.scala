@@ -227,76 +227,76 @@ class decoder extends Module {
     //给inst_sel赋值，确定指令类型
     val inst_sel = Wire(new inst_sel)
 
-    inst_sel.inst_add_w      = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x00)
-    inst_sel.inst_sub_w      = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x02)
-    inst_sel.inst_slt        = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x04)
-    inst_sel.inst_sltu       = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x05)
-    inst_sel.inst_nor        = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x08)
-    inst_sel.inst_and        = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x09)
-    inst_sel.inst_or         = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x0a)
-    inst_sel.inst_xor        = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x0b)
+    inst_sel.inst_add_w      := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x00)
+    inst_sel.inst_sub_w      := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x02)
+    inst_sel.inst_slt        := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x04)
+    inst_sel.inst_sltu       := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x05)
+    inst_sel.inst_nor        := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x08)
+    inst_sel.inst_and        := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x09)
+    inst_sel.inst_or         := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x0a)
+    inst_sel.inst_xor        := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x0b)
     //inst_sel.inst_orn        = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x0c)
     //inst_sel.inst_andn       = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x0d)
-    inst_sel.inst_sll_w      = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x0e)
-    inst_sel.inst_srl_w      = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x0f)
-    inst_sel.inst_sra_w      = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x10)
-    inst_sel.inst_mul_w      = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x18)
-    inst_sel.inst_mulh_w     = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x19)
-    inst_sel.inst_mulh_wu    = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x1a)
-    inst_sel.inst_div_w      = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x00)
-    inst_sel.inst_mod_w      = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x01)
-    inst_sel.inst_div_wu     = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x02)
-    inst_sel.inst_mod_wu     = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x03)
-    inst_sel.inst_break      = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x14)
-    inst_sel.inst_syscall    = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x16)
-    inst_sel.inst_slli_w     = inst_31_26(0x00) & inst_25_22(0x1) & inst_21_20(0x0) & inst_19_15(0x01)
-    inst_sel.inst_srli_w     = inst_31_26(0x00) & inst_25_22(0x1) & inst_21_20(0x0) & inst_19_15(0x09)
-    inst_sel.inst_srai_w     = inst_31_26(0x00) & inst_25_22(0x1) & inst_21_20(0x0) & inst_19_15(0x11)
-    inst_sel.inst_idle       = inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x11)
-    inst_sel.inst_invtlb     = inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x13)
+    inst_sel.inst_sll_w      := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x0e)
+    inst_sel.inst_srl_w      := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x0f)
+    inst_sel.inst_sra_w      := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x10)
+    inst_sel.inst_mul_w      := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x18)
+    inst_sel.inst_mulh_w     := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x19)
+    inst_sel.inst_mulh_wu    := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x1) & inst_19_15(0x1a)
+    inst_sel.inst_div_w      := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x00)
+    inst_sel.inst_mod_w      := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x01)
+    inst_sel.inst_div_wu     := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x02)
+    inst_sel.inst_mod_wu     := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x03)
+    inst_sel.inst_break      := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x14)
+    inst_sel.inst_syscall    := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x2) & inst_19_15(0x16)
+    inst_sel.inst_slli_w     := inst_31_26(0x00) & inst_25_22(0x1) & inst_21_20(0x0) & inst_19_15(0x01)
+    inst_sel.inst_srli_w     := inst_31_26(0x00) & inst_25_22(0x1) & inst_21_20(0x0) & inst_19_15(0x09)
+    inst_sel.inst_srai_w     := inst_31_26(0x00) & inst_25_22(0x1) & inst_21_20(0x0) & inst_19_15(0x11)
+    inst_sel.inst_idle       := inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x11)
+    inst_sel.inst_invtlb     := inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x13)
     //inst_sel.inst_dbar       = inst_31_26(0x0e) & inst_25_22(0x1) & inst_21_20(0x3) & inst_19_15(0x04)
     //inst_sel.inst_ibar       = inst_31_26(0x0e) & inst_25_22(0x1) & inst_21_20(0x3) & inst_19_15(0x05)
-    inst_sel.inst_slti       = inst_31_26(0x00) & inst_25_22(0x8)
-    inst_sel.inst_sltui      = inst_31_26(0x00) & inst_25_22(0x9)
-    inst_sel.inst_addi_w     = inst_31_26(0x00) & inst_25_22(0xa)
-    inst_sel.inst_andi       = inst_31_26(0x00) & inst_25_22(0xd)
-    inst_sel.inst_ori        = inst_31_26(0x00) & inst_25_22(0xe)
-    inst_sel.inst_xori       = inst_31_26(0x00) & inst_25_22(0xf)
-    inst_sel.inst_ld_b       = inst_31_26(0x0a) & inst_25_22(0x0)
-    inst_sel.inst_ld_h       = inst_31_26(0x0a) & inst_25_22(0x1)
-    inst_sel.inst_ld_w       = inst_31_26(0x0a) & inst_25_22(0x2)
-    inst_sel.inst_st_b       = inst_31_26(0x0a) & inst_25_22(0x4)
-    inst_sel.inst_st_h       = inst_31_26(0x0a) & inst_25_22(0x5)
-    inst_sel.inst_st_w       = inst_31_26(0x0a) & inst_25_22(0x6)
-    inst_sel.inst_ld_bu      = inst_31_26(0x0a) & inst_25_22(0x8)
-    inst_sel.inst_ld_hu      = inst_31_26(0x0a) & inst_25_22(0x9)
-    inst_sel.inst_cacop      = inst_31_26(0x01) & inst_25_22(0x8)
+    inst_sel.inst_slti       := inst_31_26(0x00) & inst_25_22(0x8)
+    inst_sel.inst_sltui      := inst_31_26(0x00) & inst_25_22(0x9)
+    inst_sel.inst_addi_w     := inst_31_26(0x00) & inst_25_22(0xa)
+    inst_sel.inst_andi       := inst_31_26(0x00) & inst_25_22(0xd)
+    inst_sel.inst_ori        := inst_31_26(0x00) & inst_25_22(0xe)
+    inst_sel.inst_xori       := inst_31_26(0x00) & inst_25_22(0xf)
+    inst_sel.inst_ld_b       := inst_31_26(0x0a) & inst_25_22(0x0)
+    inst_sel.inst_ld_h       := inst_31_26(0x0a) & inst_25_22(0x1)
+    inst_sel.inst_ld_w       := inst_31_26(0x0a) & inst_25_22(0x2)
+    inst_sel.inst_st_b       := inst_31_26(0x0a) & inst_25_22(0x4)
+    inst_sel.inst_st_h       := inst_31_26(0x0a) & inst_25_22(0x5)
+    inst_sel.inst_st_w       := inst_31_26(0x0a) & inst_25_22(0x6)
+    inst_sel.inst_ld_bu      := inst_31_26(0x0a) & inst_25_22(0x8)
+    inst_sel.inst_ld_hu      := inst_31_26(0x0a) & inst_25_22(0x9)
+    inst_sel.inst_cacop      := inst_31_26(0x01) & inst_25_22(0x8)
     //inst_sel.inst_preld      = inst_31_26(0x0a) & inst_25_22(0xb)
-    inst_sel.inst_jirl       = inst_31_26(0x13)
-    inst_sel.inst_b          = inst_31_26(0x14)
-    inst_sel.inst_bl         = inst_31_26(0x15)
-    inst_sel.inst_beq        = inst_31_26(0x16)
-    inst_sel.inst_bne        = inst_31_26(0x17)
-    inst_sel.inst_blt        = inst_31_26(0x18)
-    inst_sel.inst_bge        = inst_31_26(0x19)
-    inst_sel.inst_bltu       = inst_31_26(0x1a)
-    inst_sel.inst_bgeu       = inst_31_26(0x1b)
-    inst_sel.inst_lu12i_w    = inst_31_26(0x05) & ~io.inst(25)
+    inst_sel.inst_jirl       := inst_31_26(0x13)
+    inst_sel.inst_b          := inst_31_26(0x14)
+    inst_sel.inst_bl         := inst_31_26(0x15)
+    inst_sel.inst_beq        := inst_31_26(0x16)
+    inst_sel.inst_bne        := inst_31_26(0x17)
+    inst_sel.inst_blt        := inst_31_26(0x18)
+    inst_sel.inst_bge        := inst_31_26(0x19)
+    inst_sel.inst_bltu       := inst_31_26(0x1a)
+    inst_sel.inst_bgeu       := inst_31_26(0x1b)
+    inst_sel.inst_lu12i_w    := inst_31_26(0x05) & ~io.inst(25)
     //inst_sel.inst_pcaddi     = inst_31_26(0x06) & ~io.inst(25)
-    inst_sel.inst_pcaddu12i  = inst_31_26(0x07) & ~io.inst(25)
-    inst_sel.inst_csrxchg    = inst_31_26(0x01) & ~io.inst(25) & ~io.inst(24) & (~inst_9_5(0x00) & ~inst_9_5(0x01))  //rj != 0,1
-    inst_sel.inst_ll_w       = inst_31_26(0x08) & ~io.inst(25) & ~io.inst(24)
-    inst_sel.inst_sc_w       = inst_31_26(0x08) & ~io.inst(25) &  io.inst(24)
-    inst_sel.inst_csrrd      = inst_31_26(0x01) & ~io.inst(25) & ~io.inst(24) & inst_9_5(0x00)
-    inst_sel.inst_csrwr      = inst_31_26(0x01) & ~io.inst(25) & ~io.inst(24) & inst_9_5(0x01)
-    inst_sel.inst_rdcntid_w  = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x0) & inst_19_15(0x00) & inst_14_10(0x18) & inst_4_0(0x00)
-    inst_sel.inst_rdcntvl_w  = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x0) & inst_19_15(0x00) & inst_14_10(0x18) & inst_9_5(0x00) & !inst_4_0(0x00)
-    inst_sel.inst_rdcntvh_w  = inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x0) & inst_19_15(0x00) & inst_14_10(0x19) & inst_9_5(0x00)
-    inst_sel.inst_ertn       = inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x10) & inst_14_10(0x0e) & inst_9_5(0x00) & inst_4_0(0x00)
-    inst_sel.inst_tlbsrch    = inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x10) & inst_14_10(0x0a) & inst_9_5(0x00) & inst_4_0(0x00)
-    inst_sel.inst_tlbrd      = inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x10) & inst_14_10(0x0b) & inst_9_5(0x00) & inst_4_0(0x00)
-    inst_sel.inst_tlbwr      = inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x10) & inst_14_10(0x0c) & inst_9_5(0x00) & inst_4_0(0x00)
-    inst_sel.inst_tlbfill    = inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x10) & inst_14_10(0x0d) & inst_9_5(0x00) & inst_4_0(0x00)
+    inst_sel.inst_pcaddu12i  := inst_31_26(0x07) & ~io.inst(25)
+    inst_sel.inst_csrxchg    := inst_31_26(0x01) & ~io.inst(25) & ~io.inst(24) & (~inst_9_5(0x00) & ~inst_9_5(0x01))  //rj != 0,1
+    inst_sel.inst_ll_w       := inst_31_26(0x08) & ~io.inst(25) & ~io.inst(24)
+    inst_sel.inst_sc_w       := inst_31_26(0x08) & ~io.inst(25) &  io.inst(24)
+    inst_sel.inst_csrrd      := inst_31_26(0x01) & ~io.inst(25) & ~io.inst(24) & inst_9_5(0x00)
+    inst_sel.inst_csrwr      := inst_31_26(0x01) & ~io.inst(25) & ~io.inst(24) & inst_9_5(0x01)
+    inst_sel.inst_rdcntid_w  := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x0) & inst_19_15(0x00) & inst_14_10(0x18) & inst_4_0(0x00)
+    inst_sel.inst_rdcntvl_w  := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x0) & inst_19_15(0x00) & inst_14_10(0x18) & inst_9_5(0x00) & !inst_4_0(0x00)
+    inst_sel.inst_rdcntvh_w  := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x0) & inst_19_15(0x00) & inst_14_10(0x19) & inst_9_5(0x00)
+    inst_sel.inst_ertn       := inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x10) & inst_14_10(0x0e) & inst_9_5(0x00) & inst_4_0(0x00)
+    inst_sel.inst_tlbsrch    := inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x10) & inst_14_10(0x0a) & inst_9_5(0x00) & inst_4_0(0x00)
+    inst_sel.inst_tlbrd      := inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x10) & inst_14_10(0x0b) & inst_9_5(0x00) & inst_4_0(0x00)
+    inst_sel.inst_tlbwr      := inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x10) & inst_14_10(0x0c) & inst_9_5(0x00) & inst_4_0(0x00)
+    inst_sel.inst_tlbfill    := inst_31_26(0x01) & inst_25_22(0x9) & inst_21_20(0x0) & inst_19_15(0x10) & inst_14_10(0x0d) & inst_9_5(0x00) & inst_4_0(0x00)
 
     //rj赋值
     val rj_sel =Wire(Bool())
@@ -410,60 +410,60 @@ class decoder extends Module {
     io.rk := Mux(rk_valid,Mux(rk_sel, io.inst(4,0), io.inst(14,10)), 0.U)
 
     //rd,rd_valid赋值
-    rd_valid :=(inst_sel.inst_rdcntid_w| 
-                inst_sel.inst_rdcntvl_w|
-                inst_sel.inst_rdcntvh_w|
-                inst_sel.inst_add_w    |
-                inst_sel.inst_sub_w    |
-                inst_sel.inst_slt      |
-                inst_sel.inst_sltu     |
-                inst_sel.inst_nor      |
-                inst_sel.inst_and      |
-                inst_sel.inst_or       |
-                inst_sel.inst_xor      |
-                inst_sel.inst_sll_w    |
-                inst_sel.inst_srl_w    |
-                inst_sel.inst_sra_w    |
-                inst_sel.inst_mul_w    |
-                inst_sel.inst_mulh_w   |
-                inst_sel.inst_mulh_wu  |
-                inst_sel.inst_div_w    |
-                inst_sel.inst_mod_w    |
-                inst_sel.inst_div_wu   |
-                inst_sel.inst_mod_wu   |
-                inst_sel.inst_slli_w   |
-                inst_sel.inst_srli_w   |
-                inst_sel.inst_srai_w   |
-                inst_sel.inst_slti     |
-                inst_sel.inst_sltui    |
-                inst_sel.inst_addi_w   |
-                inst_sel.inst_andi     |
-                inst_sel.inst_ori      |
-                inst_sel.inst_xori     |
-                inst_sel.inst_csrrd    |
-                inst_sel.inst_csrwr    |
-                inst_sel.inst_csrxchg  |
-                inst_sel.inst_tlbsrch  |
-                inst_sel.inst_tlbrd    |
-                inst_sel.inst_tlbwr    |
-                inst_sel.inst_tlbfill  |
-                inst_sel.inst_lu12i_w  |
-                inst_sel.inst_pcaddu12i|
-                inst_sel.inst_ll_w     |
-                inst_sel.inst_sc_w     |
-                inst_sel.inst_ld_b     |
-                inst_sel.inst_ld_h     |
-                inst_sel.inst_ld_w     |
-                inst_sel.inst_ld_bu    |
-                inst_sel.inst_ld_hu    |
-                inst_sel.inst_jirl     |
-                inst_sel.inst_bl       ) & io.rd =/= 0.U(5.W)
+    io.rd_valid := (inst_sel.inst_rdcntid_w| 
+                    inst_sel.inst_rdcntvl_w|
+                    inst_sel.inst_rdcntvh_w|
+                    inst_sel.inst_add_w    |
+                    inst_sel.inst_sub_w    |
+                    inst_sel.inst_slt      |
+                    inst_sel.inst_sltu     |
+                    inst_sel.inst_nor      |
+                    inst_sel.inst_and      |
+                    inst_sel.inst_or       |
+                    inst_sel.inst_xor      |
+                    inst_sel.inst_sll_w    |
+                    inst_sel.inst_srl_w    |
+                    inst_sel.inst_sra_w    |
+                    inst_sel.inst_mul_w    |
+                    inst_sel.inst_mulh_w   |
+                    inst_sel.inst_mulh_wu  |
+                    inst_sel.inst_div_w    |
+                    inst_sel.inst_mod_w    |
+                    inst_sel.inst_div_wu   |
+                    inst_sel.inst_mod_wu   |
+                    inst_sel.inst_slli_w   |
+                    inst_sel.inst_srli_w   |
+                    inst_sel.inst_srai_w   |
+                    inst_sel.inst_slti     |
+                    inst_sel.inst_sltui    |
+                    inst_sel.inst_addi_w   |
+                    inst_sel.inst_andi     |
+                    inst_sel.inst_ori      |
+                    inst_sel.inst_xori     |
+                    inst_sel.inst_csrrd    |
+                    inst_sel.inst_csrwr    |
+                    inst_sel.inst_csrxchg  |
+                    inst_sel.inst_tlbsrch  |
+                    inst_sel.inst_tlbrd    |
+                    inst_sel.inst_tlbwr    |
+                    inst_sel.inst_tlbfill  |
+                    inst_sel.inst_lu12i_w  |
+                    inst_sel.inst_pcaddu12i|
+                    inst_sel.inst_ll_w     |
+                    inst_sel.inst_sc_w     |
+                    inst_sel.inst_ld_b     |
+                    inst_sel.inst_ld_h     |
+                    inst_sel.inst_ld_w     |
+                    inst_sel.inst_ld_bu    |
+                    inst_sel.inst_ld_hu    |
+                    inst_sel.inst_jirl     |
+                    inst_sel.inst_bl       ) & io.rd =/= 0.U(5.W)
 
     io.rd := Mux(inst_sel.inst_rdcntid_w, io.inst(9,5), Mux(inst_sel.inst_bl, 1.U(5.W), io.inst(4,0)))
 
     //立即数生成器
     val imm_sel = Wire(new imm_sel)
-    imm_sel.imm_00U :=~(inst_sel.inst_slli_w   |
+    imm_sel.imm_00U:= ~(inst_sel.inst_slli_w   |
                         inst_sel.inst_srli_w   |
                         inst_sel.inst_srai_w   |
                         inst_sel.inst_andi     |
@@ -539,26 +539,25 @@ class decoder extends Module {
     imm_sel.imm_ERA :=  inst_sel.inst_ertn     
     imm_sel.imm_COP :=  inst_sel.inst_cacop    |
                         inst_sel.inst_invtlb
-    val imm_type = Wire(UInt(12.W))
-    imm_type := imm_sel.asUInt
-    imm := Mux1H(Seq(
-        imm_type(11) -> 0.U(32.W)
-        imm_type(10) -> Cat(0.U(27.W), inst(14, 10))
-        imm_type(9) -> Cat(0.U(20.W), inst(21, 10))
-        imm_type(8) -> Cat(Fill(20, inst(21)), inst(21, 10))
-        imm_type(7) -> Cat(Fill(18, inst(21)), inst(21, 10), 0.U(2.W))
-        imm_type(6) -> Cat(Fill(14, inst(25)), inst(25, 10), 0.U(2.W))
-        imm_type(5) -> Cat(inst(24, 5), 0.U(12.W))
-        imm_type(4) -> Cat(Fill(4, inst(9)), inst(9, 0), inst(25, 10), 0.U(2.W))
-        imm_type(3) -> Cat(0.U(18.W), inst(23, 10))
-        imm_type(2) -> 0x40.U(32.W)
-        imm_type(1) -> imm := 0x6.U(32.W)
-        imm_type(0) -> imm := Cat(Fill(15, inst(21)), inst(21, 10), inst(4, 0))
+    val imm_type = imm_sel.asUInt
+    io.imm := Mux1H(Seq(
+        imm_type(11) -> 0.U(32.W),
+        imm_type(10) -> Cat(0.U(27.W), io.inst(14, 10)),
+        imm_type(9) -> Cat(0.U(20.W), io.inst(21, 10)),
+        imm_type(8) -> Cat(Fill(20, io.inst(21)), io.inst(21, 10)),
+        imm_type(7) -> Cat(Fill(18, io.inst(21)), io.inst(21, 10), 0.U(2.W)),
+        imm_type(6) -> Cat(Fill(14, io.inst(25)), io.inst(25, 10), 0.U(2.W)),
+        imm_type(5) -> Cat(io.inst(24, 5), 0.U(12.W)),
+        imm_type(4) -> Cat(Fill(4, io.inst(9)), io.inst(9, 0), io.inst(25, 10), 0.U(2.W)),
+        imm_type(3) -> Cat(0.U(18.W), io.inst(23, 10)),
+        imm_type(2) -> 0x40.U(32.W),
+        imm_type(1) -> 0x6.U(32.W),
+        imm_type(0) -> Cat(Fill(15, io.inst(21)), io.inst(21, 10), io.inst(4, 0)),
     ))
 
     //br_type
     val br_valid = Wire(Bool())
-    io.br_valid := inst_sel.inst_beq      |
+    br_valid := inst_sel.inst_beq      |
                 inst_sel.inst_bne      |
                 inst_sel.inst_blt      |
                 inst_sel.inst_bge      |
@@ -571,7 +570,7 @@ class decoder extends Module {
 
     //mem_type
     val mem_valid = Wire(Bool())
-    io.mem_valid := inst_sel.inst_ld_b    |
+    mem_valid:= inst_sel.inst_ld_b     |
                 inst_sel.inst_ld_h     |
                 inst_sel.inst_ld_w     |
                 inst_sel.inst_st_b     |
@@ -699,8 +698,8 @@ class decoder extends Module {
                     inst_sel.inst_jirl     |
                     inst_sel.inst_bl       
 
-   //prev_vec
-   io.prev_vec(0) :=   inst_sel.inst_rdcntid_w|
+   //priv_vec
+   io.priv_vec(0) :=   inst_sel.inst_rdcntid_w|
                     inst_sel.inst_csrrd    |
                     inst_sel.inst_csrwr    |
                     inst_sel.inst_csrxchg  |
@@ -714,22 +713,22 @@ class decoder extends Module {
                     inst_sel.inst_invtlb   |
                     inst_sel.inst_ll_w     |
                     inst_sel.inst_sc_w     
-    io.prev_vec(1) :=  inst_sel.inst_csrwr
-    io.prev_vec(2) :=  inst_sel.inst_csrxchg
-    io.prev_vec(3) :=  inst_sel.inst_ertn
-    io.prev_vec(4) :=  inst_sel.inst_tlbrd
-    io.prev_vec(5) :=  inst_sel.inst_tlbwr
-    io.prev_vec(6) :=  inst_sel.inst_tlbfill
-    io.prev_vec(7) :=  inst_sel.inst_tlbsrch
-    io.prev_vec(8) :=  inst_sel.inst_invtlb
-    io.prev_vec(9) :=  inst_sel.inst_idle
-    io.prev_vec(10):=  inst_sel.inst_cacop
-    io.prev_vec(11):=  inst_sel.inst_ll_w
-    io.prev_vec(12):=  inst_sel.inst_sc_w
+    io.priv_vec(1) :=  inst_sel.inst_csrwr
+    io.priv_vec(2) :=  inst_sel.inst_csrxchg
+    io.priv_vec(3) :=  inst_sel.inst_ertn
+    io.priv_vec(4) :=  inst_sel.inst_tlbrd
+    io.priv_vec(5) :=  inst_sel.inst_tlbwr
+    io.priv_vec(6) :=  inst_sel.inst_tlbfill
+    io.priv_vec(7) :=  inst_sel.inst_tlbsrch
+    io.priv_vec(8) :=  inst_sel.inst_invtlb
+    io.priv_vec(9) :=  inst_sel.inst_idle
+    io.priv_vec(10):=  inst_sel.inst_cacop
+    io.priv_vec(11):=  inst_sel.inst_ll_w
+    io.priv_vec(12):=  inst_sel.inst_sc_w
 
     //exception vector
     val ine_sel = Wire(Bool())
-    ine_sel := ~inst_sel.orR
+    ine_sel := ~inst_sel.asUInt.orR
     when(ine_sel){
         io.exp := 0x8d.U(8.W)
     }.elsewhen(inst_sel.inst_break){

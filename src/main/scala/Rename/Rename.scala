@@ -29,8 +29,8 @@ class Rename(n:Int) extends Module {
     io.prd := io.alloc_preg
 
     //处理WAW相关
-    crat.io.rd_valid(1) := io.rd_valid(1)&rename_en(1)
-    crat.io.rd_valid(0) := Mux(io.rd_valid(1)&(io.rd(0)===io.rd(1)),false.B,io.rd_valid(0)&rename_en(0)) 
+    crat.io.rd_valid(1) := io.rd_valid(1)&io.rename_en(1)
+    crat.io.rd_valid(0) := Mux(io.rd_valid(1)&(io.rd(0)===io.rd(1)),false.B,io.rd_valid(0)&io.rename_en(0)) 
     io.pprd(1) := crat.io.pprd(1)
     io.pprd(0) := Mux(io.rd_valid(1)&(io.rd(0)===io.rd(1)),io.prd(1),crat.io.pprd(0))
 
