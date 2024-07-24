@@ -6,3 +6,4 @@ verilog/
 .vscode/
 .bloop/
 src/main/scala/Icache/README.md
+test_run_dir/
