@@ -171,7 +171,11 @@ class Dcache extends Module{
     val hit_oh                  = UIntToOH(hit_MEM)
     val hit_index_MEM           = OHToUInt(hit_oh)
     val cache_hit_MEM           = hit_MEM.orR
-    val cache_miss_MEM          = !hit_MEM.orR
+    val cache_miss_MEM          = WireDefault(!hit_MEM.orR)
+
+    /* cacop logic */
+    val cacop_way_MEM   = Mux(cacop_op_MEM(1), hit_index_MEM, addr_MEM(0))
+    val cacop_exec_MEM  = Mux(cacop_op_MEM(1), cache_hit_MEM(0), true.B)
 
     /* decode */
     val tag_MEM                 = addr_MEM(31, 32-TAG_WIDTH)
@@ -184,7 +188,7 @@ class Dcache extends Module{
     val lru_miss_upd            = WireDefault(false.B)
     val lru_hit_upd             = WireDefault(false.B)
     when(lru_hit_upd){
-        lru_mem(index_MEM) := !hit_index_MEM(1)
+        lru_mem(index_MEM) := !hit_index_MEM
     }.elsewhen(lru_miss_upd){
         lru_mem(index_MEM) := !lru_sel
     }
@@ -227,13 +231,17 @@ class Dcache extends Module{
     }
 
     /* write logic */
+    // 写入cmem
     tag_dina                    := Mux(cacop_en_MEM, 0.U, true.B ## tag_MEM)
     val block_offset            = offset_MEM ## 0.U(3.W)
     val wmask                   = Mux(is_load_MEM, 0.U((8*OFFSET_DEPTH).W), ((0.U((8*OFFSET_DEPTH-32).W) ## rmask) << block_offset))
     val wdata_refill            = ((0.U((8*OFFSET_DEPTH-32).W) ## wdata_MEM) << block_offset)
-    val wmask_byte              = VecInit.tabulate(OFFSET_DEPTH)(i => wmask(8*i)).asUInt    //
+    val wmask_byte              = VecInit.tabulate(OFFSET_DEPTH)(i => wmask(8*i)).asUInt
+
+    cmem_dina                   := (wmask & wdata_refill) | (~wmask & ret_buf)
 
     /* write buffer */
+    // 写入总线 当需要被替换(lru_sel)的cache line为dirty时，将其写入总线    前 32B 为数据，后 4B 为写入地址
     val wrt_buf                     = RegInit(0.U((8*OFFSET_DEPTH+32).W))
     when(wbuf_we){
         when(cacop_en_MEM){
@@ -242,10 +250,144 @@ class Dcache extends Module{
         }.elsewhen(uncache_MEM){
             wrt_buf := 0.U((8*OFFSET_DEPTH-32).W) ## wdata_MEM ## addr_MEM   // 非缓存操作，写入数据拼接addr,前60B补零
         }.otherwise{
-            wrt_buf := cmem_rdata_MEM(lru_sel) ## tag_r_MEM(lru_sel) ## addr_MEM(INDEX_WIDTH+OFFSET_WIDTH-1, OFFSET_WIDTH) ## 0.U(OFFSET_WIDTH.W)   // 写入数据拼接tag和index，offset替换为0
+            wrt_buf := cmem_rdata_MEM(lru_sel) ## tag_r_MEM(lru_sel) ## index_MEM ## 0.U(OFFSET_WIDTH.W)   // 写入数据拼接tag和index，offset替换为0
         }
     }.elsewhen(io.d_wready && io.d_wvalid){
         wrt_buf := 0.U(32.W) ## wrt_buf(8*OFFSET_DEPTH+32-1, 64) ## wrt_buf(31, 0)  // 总线写入数据拼接addr，实际上是右移操作
     }
 
+
+
+    /* read FSM */
+    // wfsm control
+    val wfsm_en                     = WireDefault(false.B)
+    val wfsm_reset                  = WireDefault(false.B)
+    val wrt_finish                  = WireDefault(false.B)
+
+    val d_rvalid                    = WireDefault(false.B)
+    val s_idle :: s_miss :: s_refill :: s_wait :: s_hold :: Nil = Enum(5)
+    val state = RegInit(s_idle)
+
+    switch(state){
+        is(s_idle){
+            when(cacop_en_MEM){
+                state               := Mux(cacop_exec_MEM, s_refill, s_idle)
+                cache_miss_MEM      := cacop_exec_MEM
+                addr_sel            := Mux(cacop_exec_MEM, FROM_SEG, FROM_PIPE)
+                wbuf_we             := cacop_exec_MEM
+                wfsm_en             := cacop_exec_MEM
+            }.elsewhen(mem_type_MEM(4)){
+                // 有 LD 或 ST 操作
+                when(uncache_MEM){
+                    state               := s_hold
+                    cache_miss_MEM      := true.B
+                    addr_sel            := FROM_SEG
+                }.otherwise{
+                    state                           := Mux(cache_hit_MEM(0), s_idle, s_miss)
+                    cache_miss_MEM                  := !cache_hit_MEM
+                    lru_hit_upd                     := cache_hit_MEM(1)
+                    data_sel                        := FROM_CMEM
+                    cmem_we(hit_index_MEM)       := Mux(is_store_MEM && cache_hit_MEM(1), wmask_byte, 0.U)
+                    dirty_we                        := is_store_MEM
+                    wbuf_we                         := !cache_hit_MEM(2)
+                    wfsm_en                         := !cache_hit_MEM(3)
+                    addr_sel                        := FROM_PIPE
+                }
+            }
+        }
+        is(s_miss){
+            d_rvalid                := true.B
+            cache_miss_MEM          := true.B
+            state                   := Mux(io.d_rready && io.d_rlast, Mux(uncache_MEM, s_wait, s_refill), s_miss)
+            addr_sel                := FROM_SEG
+        }
+        is(s_refill){
+            val tag_idx             = Mux(cacop_en_MEM, cacop_way_MEM, lru_sel)
+            state                   := s_wait
+            cache_miss_MEM          := true.B
+            lru_miss_upd            := !cacop_en_MEM
+            tagv_we_EX(tag_idx)     := true.B
+            cmem_we(lru_sel)        := Mux(cacop_en_MEM, 0.U(OFFSET_DEPTH.W), Fill(OFFSET_DEPTH, 1.U(1.W)))
+            dirty_clean             := is_load_MEM || cacop_en_MEM
+            dirty_we                := is_store_MEM
+            addr_sel                := FROM_SEG
+        }
+        is(s_wait){
+            addr_sel                := Mux(wrt_finish, FROM_PIPE, FROM_SEG)
+            state                   := Mux(wrt_finish, s_idle, s_wait)
+            wfsm_reset              := true.B
+            cache_miss_MEM          := !wrt_finish
+        }
+        is(s_hold){
+            val confirm_exec        = io.rob_index_CMT === rob_index_EX_MEM
+            addr_sel                := Mux(flush_EX_MEM || exception_MEM, FROM_PIPE, FROM_SEG)
+            state                   := Mux(flush_EX_MEM || exception_MEM, s_idle, Mux(confirm_exec, Mux(is_store_MEM, s_wait, s_miss), s_hold))
+            cache_miss_MEM          := !flush_EX_MEM
+            wfsm_reset              := flush_EX_MEM || exception_MEM
+            wfsm_en                 := confirm_exec && !(flush_EX_MEM || exception_MEM)
+            wbuf_we                 := confirm_exec && !(flush_EX_MEM || exception_MEM)
+        }
+    }
+
+    /* write fsm */
+    val wrt_count                   = RegInit(0.U(8.W))
+    val wrt_count_reset             = WireDefault(false.B)
+    val wrt_num                     = Mux(uncache_MEM, 0.U, (OFFSET_DEPTH / 4 - 1).U)
+    val d_wvalid                    = WireDefault(false.B)
+    val d_wlast                     = WireDefault(false.B)
+    val d_bready                    = WireDefault(false.B)
+
+    when(wrt_count_reset){
+        wrt_count := wrt_num
+    }.elsewhen(io.d_wvalid && io.d_wready){
+        wrt_count := wrt_count - 1.U
+    }
+
+    val w_idle :: w_write :: w_finish :: Nil = Enum(3)
+    val wrt_state = RegInit(w_idle)
+
+    switch(wrt_state){
+        is(w_idle){
+            when(wfsm_en){
+                when(cacop_en_MEM){
+                    wrt_state       := Mux(cacop_op_MEM === 0.U, w_finish, Mux(is_dirty, w_write, w_finish))
+                }.elsewhen(uncache_MEM){
+                    wrt_state       := Mux(is_store_MEM, w_write, w_finish)
+                }.otherwise{
+                    wrt_state       := Mux(is_dirty, w_write, w_finish)
+                }
+                wrt_count_reset     := true.B
+            }
+        }
+        is(w_write){
+            wrt_state    := Mux(io.d_bvalid, w_finish, w_write)
+            d_wvalid     := !wrt_count.andR
+            d_wlast      := wrt_count === 0.U
+            d_bready     := true.B
+        }
+        is(w_finish){
+            wrt_state    := Mux(wfsm_reset && !stall, w_idle, w_finish)
+            wrt_finish   := !stall
+        }
+    }
+
+    // output
+    io.has_store        := io.mem_type_EX || mem_type_reg_EX_TC(2)
+    io.cache_miss_MEM   := cache_miss_MEM
+    io.rdata_MEM        := rdata
+    io.d_araddr         := Mux(uncache_MEM, addr_MEM, addr_MEM(31, OFFSET_WIDTH) ## 0.U(OFFSET_WIDTH.W))
+    io.d_rvalid         := d_rvalid
+    io.d_rsize          := Mux(uncache_MEM, mem_type_MEM(1, 0), 2.U)
+    io.d_rburst         := 1.U
+    io.d_rlen           := Mux(uncache_MEM, 0.U, (OFFSET_DEPTH / 4 - 1).U)
+
+    io.d_awaddr         := wrt_buf(31, 0)
+    io.d_wdata          := wrt_buf(63, 32)
+    io.d_wvalid         := d_wvalid
+    io.d_wlast          := d_wlast
+    io.d_wstrb          := Mux(uncache_MEM, (UIntToOH(UIntToOH(mem_type_MEM(1, 0))) - 1.U)(3, 0), Fill(4, 1.U(1.W)))
+    io.d_wsize          := Mux(uncache_MEM, mem_type_MEM(1, 0), 2.U)
+    io.d_wburst         := 1.U
+    io.d_wlen           := wrt_num
+    io.d_bready         := d_bready
 }
