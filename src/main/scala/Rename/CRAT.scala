@@ -57,19 +57,19 @@ class CRAT(n:Int) extends Module {
 
     //从CRAT中读取rj,rk,rd
     for(i <- 0 until 2){
+        val rj_hit = Wire(Vec(n,Bool()))         //rj的命中信号，第几位为1表示第几个物理寄存器命中
+        val rk_hit = Wire(Vec(n,Bool()))         //rk的命中信号，第几位为1表示第几个物理寄存器命中
+        val rd_hit = Wire(Vec(n,Bool()))         //rd的命中信号，第几位为1表示第几个物理寄存器命中
         for(j <- 0 until n){
-            val rj_hit = Wire(Vec(2,UInt(n.W)))         //rj的命中信号，第几位为1表示第几个物理寄存器命中
-            val rk_hit = Wire(Vec(2,UInt(n.W)))         //rk的命中信号，第几位为1表示第几个物理寄存器命中
-            val rd_hit = Wire(Vec(2,UInt(n.W)))         //rd的命中信号，第几位为1表示第几个物理寄存器命中
             rj_hit(j) := rat(j).valid && (rat(j).areg === io.rj(i))
             rk_hit(j) := rat(j).valid && (rat(j).areg === io.rk(i))
             rd_hit(j) := rat(j).valid && (rat(j).areg === io.rd(i))
         }
 
         //将命中信号（独热码）转换为物理寄存器编号（UInt）
-        io.prj(i) := OHToUInt(rj_hit(i))
-        io.prk(i) := OHToUInt(rk_hit(i))        
-        io.pprd(i) := OHToUInt(rd_hit(i))
+        io.prj(i) := OHToUInt(rj_hit)
+        io.prk(i) := OHToUInt(rk_hit)        
+        io.pprd(i) := OHToUInt(rd_hit)
         io.prj_ready(i) := rat(io.prj(i)).ready
         io.prk_ready(i) := rat(io.prk(i)).ready
     }
