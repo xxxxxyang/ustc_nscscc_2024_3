@@ -32,13 +32,23 @@ class FetchQueue() extends Module{
     when(!io.full){
         when(in_count === 1.U){
             cur := cur ^ 1.U
-            queue(cur)(tail) := to_insert(0)
+            for(i <- 0 until FQ_SIZE){
+                when(tail === i.U){
+                    queue(cur)(i) := to_insert(0)
+                }
+            }
             when(cur.asBool){
                 tail := shift1(tail)
             }
         }.elsewhen(in_count === 2.U){
-            queue(cur)(tail) := to_insert(0)
-            queue(cur ^ 1.U)(Mux(cur.asBool, shift1(tail), tail)) := to_insert(1)
+            for(i <- 0 until FQ_SIZE){
+                when(tail === i.U){
+                    queue(cur)(i) := to_insert(0)
+                }
+                when(Mux(cur.asBool, shift1(tail), tail) === i.U){
+                    queue(cur)(i) := to_insert(1)
+                }
+            }
             tail := shift1(tail)
         }
     }
