@@ -67,4 +67,15 @@ object control_signal{
     val STW      = 0x16.U(5.W)
     val LDBU     = 0x18.U(5.W)
     val LDHU     = 0x19.U(5.W)    
+    
+    // br_type  inst(29, 26)
+    val BR_JIRL = 3.U(4.W)
+    val BR_B    = 4.U(4.W)
+    val BR_BL   = 5.U(4.W)
+    val BR_BEQ  = 6.U(4.W)
+    val BR_BNE  = 7.U(4.W)
+    val BR_BLT  = 8.U(4.W)
+    val BR_BGE  = 9.U(4.W)
+    val BR_BLTU = 10.U(4.W)
+    val BR_BGEU = 11.U(4.W)
 }
