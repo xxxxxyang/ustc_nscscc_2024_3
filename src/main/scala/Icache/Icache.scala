@@ -1,5 +1,5 @@
 /*  version 1.0
-    未考虑 强序非缓存 cacop
+    未考虑 cacop
 
     容量        8KB
     两路组相联  128组
@@ -21,6 +21,12 @@ class Icache_IO extends Bundle {
     val paddr_IF                = Input(UInt(32.W))         // PC physical
     val exception               = Input(Bool())             // 异常
     val rvalid_IF               = Input(Bool())             // CPU读取数据请求
+    val uncache_IF              = Input(Bool())             // 非缓存
+    // val cacop_en                = Input(Bool())             // 是否有cacop
+    // val cacop_op                = Input(UInt(2.W))          // cacop操作
+
+    /* output */
+    // val has_cacop_IF            = Output(Bool())            // 是否有cacop
 
     // RM
     /* output */
@@ -66,18 +72,27 @@ class Icache extends Module{
     // IF-RM SEGREG
     val paddr_reg               = RegInit(0.U(32.W))        // 物理地址
     val rvalid_reg              = RegInit(false.B)          // 读取数据有效，复位为false
+    val uncache_reg             = RegInit(false.B)          // 非缓存
+    // val cacop_en_reg            = RegInit(false.B)          // 是否有cacop
+    // val cacop_op_reg            = RegInit(0.U(2.W))         // cacop操作
     val cache_miss_RM           = WireDefault(false.B)      // cache miss
 
     /* Seg Reg 更新 */
     when(!(stall || cache_miss_RM)){
         paddr_reg               := io.paddr_IF
         rvalid_reg              := io.rvalid_IF
+        uncache_reg             := io.uncache_IF
+        // cacop_en_reg            := io.cacop_en
+        // cacop_op_reg            := io.cacop_op
     }
 
     // RM
     /* segreg-> */
     val paddr_RM                = paddr_reg
     val rvalid_RM               = rvalid_reg                // CPU读取请求
+    val uncache_RM              = uncache_reg               // 非缓存
+    // val cacop_en_RM             = cacop_en_reg
+    // val cacop_op_RM             = cacop_op_reg
 
     /* 控制信号 */
     val i_rvalid                = WireDefault(false.B)      // 请求总线数据
@@ -148,7 +163,7 @@ class Icache extends Module{
 
     /* return buf read */
     val rbuf_hit_group          = VecInit.tabulate(OFFSET_DEPTH/4)(i => if(i == OFFSET_DEPTH/4-1) 0.U(32.W) ## rbuf(32*i+31, 32*i) else rbuf(32*i+63, 32*i))
-    val rbuf_rdata              = rbuf_hit_group(offset_RM(OFFSET_WIDTH - 1, 2))        // 从return buf中根据偏移取出两条指令
+    val rbuf_rdata              = Mux(uncache_RM, rbuf(8*OFFSET_DEPTH-1, 8*OFFSET_DEPTH-64), rbuf_hit_group(offset_RM(OFFSET_WIDTH-1, 2)))
 
     /* CPU rdata */
     val rdata                   = VecInit.tabulate(2)(i => (Mux(data_sel === FROM_CMEM, cmem_rdata(32*i+31, 32*i), rbuf_rdata(32*i+31, 32*i))))   // 选择数据来源
@@ -179,16 +194,22 @@ class Icache extends Module{
             when(io.exception){
                 state           := s_idle
             }.elsewhen(rvalid_RM){
-                state           := Mux(cache_miss_RM, s_miss, s_idle)
-                data_sel        := FROM_CMEM
-                addr_sel        := FROM_PIPE
-                lru_hit_upd     := cache_hit
-                inst_valid      := cache_hit
+                when(uncache_RM){
+                    state           := s_miss                                       // 当CPU准备读取数据且非缓存状态(强序非缓存地址)时，进入miss状态
+                    cache_miss_RM   := true.B                                       // 缓存未命中
+                    addr_sel        := FROM_SEG
+                }.otherwise{
+                    state           := Mux(cache_miss_RM, s_miss, s_idle)
+                    data_sel        := FROM_CMEM
+                    addr_sel        := FROM_PIPE
+                    lru_hit_upd     := cache_hit
+                    inst_valid      := cache_hit
+                }
             }
         }
         is(s_miss){
             i_rvalid            := !read_finish
-            state               := Mux(read_finish, s_refill, s_miss)
+            state               := Mux(read_finish, Mux(uncache_RM, s_wait, s_refill), s_miss)
         }
         is(s_refill){
             addr_sel            := FROM_SEG
@@ -212,9 +233,9 @@ class Icache extends Module{
 
     /* AXI */
     io.i_rvalid                 := i_rvalid
-    io.i_araddr                 := tag_RM ## index_RM ## 0.U(OFFSET_WIDTH.W)
+    io.i_araddr                 := Mux(uncache_RM, paddr_RM, tag_RM ## index_RM ## 0.U(OFFSET_WIDTH.W))
     io.i_rburst                 := 1.U
     io.i_rsize                  := 2.U                                          // 读数据宽度
-    io.i_rlen                   := (8 * OFFSET_DEPTH/32 - 1).U                  // 读数据长度
+    io.i_rlen                   := Mux(uncache_RM, 1.U, (8*OFFSET_DEPTH/32-1).U)// 读数据长度
 
 }
