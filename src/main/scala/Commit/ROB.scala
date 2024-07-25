@@ -42,7 +42,6 @@ class ROB() extends Module{
     //tail必定每次进来一行(2个)，head不一定
     
     // dp: 接收dispatch的输入，填入新表项，tail++，返回rob_index
-    // TODO: full处理
     for(i <- 0 until 2) {
         io.dp(i).rob_index := 0.U; // default
         when(io.dp_valid) {
@@ -58,6 +57,7 @@ class ROB() extends Module{
             tail := tail + 1.U
         }
     }
+    io.full := (tail + 1.U === head)
 
     // wb: 接收4个FU的结果，填入表项
     for(i <- 0 until 4) {
