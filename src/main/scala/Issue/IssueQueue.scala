@@ -4,7 +4,6 @@ import Configs._
 import Interfaces._
 import InstPacks._
 import Util._
-import chisel3.experimental.BundleLiterals._
 
 class IQ_Item[T <: Data](pack_t: T) extends Bundle{
     val inst            = pack_t.cloneType
@@ -42,16 +41,17 @@ class IssueQueue(n: Int, ordered: Boolean) extends Module{
     val tail  = RegInit(0.U((log2Ceil(n)+1).W))
     val mask  = RegInit(0.U(n.W)) //mask(i) = (i < tail), mask = (1<<tail) - 1
     io.full  := mask(n-2)
+    io.elem_num := tail
     
     // pop
     val ready  = VecInit.tabulate(n)(i => 
         mask(i) && queue(i).prj_waked && queue(i).prk_waked)
     val is_pop = Wire(Bool())
-    val pop    = Vec(n, Bool())
+    val pop    = Wire(Vec(n, Bool()))
     if (ordered) {
         is_pop := ready(0) && !io.stall
         pop    := VecInit.tabulate(n)(i => (i == 0).B)
-        io.issue_inst  := queue(0)
+        io.issue_inst  := queue(0).inst
     } else {
         is_pop := ready.asUInt.orR && !io.stall
         pop    := Mux(is_pop,
@@ -69,11 +69,13 @@ class IssueQueue(n: Int, ordered: Boolean) extends Module{
     
     //insert
     val in_count    = PopCount(io.insts_valid)
-    val insts       = VecInit.tabulate(2)(i => (new IQ_Item(new pack_RN)).Lit(
-        _.inst      -> io.insts(i),
-        _.prj_waked -> io.prj_waked(i),
-        _.prk_waked -> io.prk_waked(i)
-    ))
+    val insts       = VecInit.tabulate(2)(i => {
+        val item = Wire(new IQ_Item(new pack_RN))
+        item.inst      := io.insts(i)
+        item.prj_waked := io.prj_waked(i)
+        item.prk_waked := io.prk_waked(i)
+        item
+    })
     val to_insert   = VecInit(Mux(io.insts_valid(0), insts(0), insts(1)), insts(1))
 
     tail := tail_pop + in_count
@@ -82,11 +84,11 @@ class IssueQueue(n: Int, ordered: Boolean) extends Module{
 
     for(i <- 0 until n){
         val queue_nxt = Wire(new IQ_Item(new pack_RN))
-        queue_nxt := 0.U
+        queue_nxt := 0.U.asTypeOf(new IQ_Item(new pack_RN))
         when(mask_keep(i)){
             queue_nxt := queue(i)
         }.elsewhen(mask_shift(i)){
-            queue_nxt := queue(i+1)
+            if(i != n-1) queue_nxt := queue(i+1)
         }.elsewhen(io.insts_valid.asUInt.orR  && i.U === tail_pop){
             queue_nxt := to_insert(0)
         }.elsewhen(io.insts_valid.asUInt.andR && i.U === tail_pop + 1.U){
