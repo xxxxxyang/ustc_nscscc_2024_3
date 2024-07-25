@@ -12,7 +12,7 @@
 
 import chisel3._
 import chisel3.util._
-import java.io.File
+import RAM._
 
 class Icache_IO extends Bundle {
     // IF

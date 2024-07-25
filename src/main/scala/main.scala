@@ -44,7 +44,7 @@ object Cache_Main extends App {
     }
     
     ChiselStage.emitSystemVerilogFile(
-        new Icache, 
+        new Dcache, 
         Array("-td", "build/"),
         firtoolOpts = firtool_options,
     )

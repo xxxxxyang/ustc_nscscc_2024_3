@@ -1,6 +1,10 @@
 // 32组 两路组相联 32B cache块大小 容量为1KB
 
-object DCache_Config{
+import chisel3._
+import chisel3.util._
+
+object Dcache_Config{
+    val ROB_NUM     = 24
     val INDEX_WIDTH = 5
     val INDEX_DEPTH = 1 << INDEX_WIDTH                  // INDEX_DEPTH = 32
 
