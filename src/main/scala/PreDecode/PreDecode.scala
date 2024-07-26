@@ -55,6 +55,14 @@ class PreDecode extends Module {
     }
     insts_PD(0).inst_valid      := io.insts(0).inst_valid
     insts_PD(1).inst_valid      := io.insts(0).inst_valid && io.insts(1).inst_valid && !need_fix(0)
+    
+    // 前端异常处理
+    for(i <- 0 until 2){
+        when(io.insts(i).exception.orR){
+            insts_PD(i).inst := 0x00100000.U //ADD r0, r0, r0
+        }
+    }
+
     io.insts_PD        := insts_PD
 
     val fix_index = !need_fix(0)

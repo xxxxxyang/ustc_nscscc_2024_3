@@ -1,6 +1,7 @@
 import chisel3._
 import chisel3.util._
 import InstPacks._
+import control_signal._
 
 class inst_sel extends Bundle {
     val inst_add_w      = Bool()
@@ -110,7 +111,15 @@ class Decoder extends Module {
     val ins_type    = Wire(UInt(3.W))
 
     val inst = io.inst_FQ.inst
-    val inst_ID = pack_ID(io.inst_FQ)
+    val inst_ID = Wire(new pack_ID)
+    inst_ID.inst_valid := io.inst_FQ.inst_valid
+    inst_ID.pc         := io.inst_FQ.pc
+    inst_ID.pred_valid := io.inst_FQ.pred_valid
+    inst_ID.pred_jump  := io.inst_FQ.pred_jump
+    inst_ID.pred_npc   := io.inst_FQ.pred_npc
+    inst_ID.exception  := io.inst_FQ.exception
+    inst_ID.inst       := io.inst_FQ.inst
+
     //把指令码和寄存器编号转换为独热编码
     val inst_31_26 = Wire(UInt(64.W))
     val inst_25_22 = Wire(UInt(16.W))
@@ -642,10 +651,17 @@ class Decoder extends Module {
     inst_ID.imm := imm
     inst_ID.alu_op := alu_op
     inst_ID.alu_rs1_sel := alu_rs1_sel
+    inst_ID.alu_rs2_sel := alu_rs2_sel
     inst_ID.br_type := br_type
     inst_ID.mem_type := mem_type
     inst_ID.priv_vec := priv_vec
     inst_ID.ins_type := ins_type
 
+    // 前端异常处理
+    when(io.inst_FQ.exception.orR){
+        inst_ID.ins_type  := ARITH
+    }.otherwise{
+        inst_ID.exception := exception
+    }
     io.inst_ID := inst_ID
 }
