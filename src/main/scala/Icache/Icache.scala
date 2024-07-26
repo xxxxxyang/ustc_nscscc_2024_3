@@ -22,11 +22,11 @@ class Icache_IO extends Bundle {
     val exception               = Input(Bool())             // 异常
     val rvalid_IF               = Input(Bool())             // CPU读取数据请求
     val uncache_IF              = Input(Bool())             // 非缓存
-    // val cacop_en                = Input(Bool())             // 是否有cacop
-    // val cacop_op                = Input(UInt(2.W))          // cacop操作
+    val cacop_en                = Input(Bool())             // 是否有cacop
+    val cacop_op                = Input(UInt(2.W))          // cacop操作
 
     /* output */
-    // val has_cacop_IF            = Output(Bool())            // 是否有cacop
+    val has_cacop_IF            = Output(Bool())            // 是否有cacop
 
     // RM
     /* output */
@@ -59,6 +59,9 @@ class Icache extends Module{
     /* 取index */
     val index_IF                = io.addr_IF(OFFSET_WIDTH + INDEX_WIDTH - 1, OFFSET_WIDTH)
     val addr_sel                = WireDefault(FROM_PIPE)    // 选择BRAM地址为PIPE
+    val cacop_en_IF         = RegInit(false.B)          // cacop使能，复位为false
+    val cacop_op_IF         = RegInit(0.U(2.W))         // cacop操作，复位为0，无操作
+    val cacop_addr_IF       = RegInit(0.U(32.W))        // cacop地址
 
     /* TAG BRAM */
     val tag_BRAM                = VecInit.fill(2)(Module(new xilinx_single_port_ram_no_change(TAG_WIDTH + 1, INDEX_DEPTH)).io)      // BRAM 2*20b*128
@@ -73,17 +76,25 @@ class Icache extends Module{
     val paddr_reg               = RegInit(0.U(32.W))        // 物理地址
     val rvalid_reg              = RegInit(false.B)          // 读取数据有效，复位为false
     val uncache_reg             = RegInit(false.B)          // 非缓存
-    // val cacop_en_reg            = RegInit(false.B)          // 是否有cacop
-    // val cacop_op_reg            = RegInit(0.U(2.W))         // cacop操作
+    val cacop_en_reg            = RegInit(false.B)          // 是否有cacop
+    val cacop_op_reg            = RegInit(0.U(2.W))         // cacop操作
     val cache_miss_RM           = WireDefault(false.B)      // cache miss
 
     /* Seg Reg 更新 */
+    when(!cacop_en_IF){
+        cacop_en_IF     := io.cacop_en
+        cacop_op_IF     := io.cacop_op
+        cacop_addr_IF   := io.paddr_IF
+    }.elsewhen(!(stall || cache_miss_RM)){
+        cacop_en_IF     := false.B
+    }
+
     when(!(stall || cache_miss_RM)){
-        paddr_reg               := io.paddr_IF
+        paddr_reg               := Mux(cacop_en_IF, cacop_addr_IF, io.paddr_IF)
         rvalid_reg              := io.rvalid_IF
         uncache_reg             := io.uncache_IF
-        // cacop_en_reg            := io.cacop_en
-        // cacop_op_reg            := io.cacop_op
+        cacop_en_reg            := cacop_en_IF
+        cacop_op_reg            := cacop_op_IF
     }
 
     // RM
@@ -91,8 +102,8 @@ class Icache extends Module{
     val paddr_RM                = paddr_reg
     val rvalid_RM               = rvalid_reg                // CPU读取请求
     val uncache_RM              = uncache_reg               // 非缓存
-    // val cacop_en_RM             = cacop_en_reg
-    // val cacop_op_RM             = cacop_op_reg
+    val cacop_en_RM             = cacop_en_reg
+    val cacop_op_RM             = cacop_op_reg
 
     /* 控制信号 */
     val i_rvalid                = WireDefault(false.B)      // 请求总线数据
@@ -135,7 +146,7 @@ class Icache extends Module{
     /* read/write tag */
     for(i <- 0 until 2){
         tag_BRAM(i).addra       := Mux(addr_sel === FROM_PIPE, index_IF, index_RM)      // 2选1选择器 当在IF阶段时，为状态idle，addr_sel为from_pipe，从BRAM中读取指令，否则即miss，准备向miss的cache line写入指令
-        tag_BRAM(i).dina        := true.B ## tag_RM                                     // 写入true ## tag_RM dina为写入数据（即将valid置为1）
+        tag_BRAM(i).dina        := Mux(cacop_en_RM, 0.U, true.B ## tag_RM)              // 写入true ## tag_RM dina为写入数据（即将valid置为1）
         tag_BRAM(i).clka        := clock
         tag_BRAM(i).wea         := tag_we(i)
     }
@@ -155,6 +166,9 @@ class Icache extends Module{
     cache_hit                   := cache_hit_line.orR
     cache_miss_RM               := !cache_hit
 
+    // cacop
+    val cacop_way_RM    = Mux(cacop_op_RM(1), cache_hit_line, paddr_RM(0))              // 地址直接索引或查询索引路选择
+    val cacop_exec_RM   = Mux(cacop_op_RM(1), cache_hit, true.B)                        // 直接索引或查询索引是否操作选择
 
     /* cache mem read */
     val cmem_hit_line           = Mux1H(cache_hit_oh, cmem_line_IF)                     // 命中的cache line
@@ -193,6 +207,10 @@ class Icache extends Module{
             cnt_re              := true.B
             when(io.exception){
                 state           := s_idle
+            }.elsewhen(cacop_en_RM){
+                state               := Mux(cacop_exec_RM, s_refill, s_idle)         // 当为cacop操作时，根据cacop_exec_RM选择s_refill或s_idle
+                addr_sel            := Mux(cacop_exec_RM, FROM_SEG, FROM_PIPE)
+                cache_miss_RM       := cacop_exec_RM
             }.elsewhen(rvalid_RM){
                 when(uncache_RM){
                     state           := s_miss                                       // 当CPU准备读取数据且非缓存状态(强序非缓存地址)时，进入miss状态
@@ -213,10 +231,10 @@ class Icache extends Module{
         }
         is(s_refill){
             addr_sel            := FROM_SEG
-            lru_miss_upd        := true.B
+            lru_miss_upd        := !cacop_en_RM
             state               := s_wait
-            tag_we(lru_sel)     := true.B
-            cmem_we(lru_sel)    := true.B
+            tag_we( Mux(cacop_en_RM, cacop_way_RM, lru_sel))     := true.B
+            cmem_we(lru_sel)    := !cacop_en_RM
         }
         is(s_wait){
             state               := Mux(stall, s_idle, s_wait)
@@ -230,6 +248,7 @@ class Icache extends Module{
     /* CPU */
     io.inst                     := rdata
     io.inst_valid               := inst_valid
+    io.has_cacop_IF             := cacop_en_IF
 
     /* AXI */
     io.i_rvalid                 := i_rvalid
