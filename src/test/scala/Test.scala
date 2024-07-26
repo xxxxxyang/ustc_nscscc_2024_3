@@ -20,4 +20,3 @@ class BasicTest extends AnyFlatSpec with ChiselScalatestTester {
         }
     }
 }
-
