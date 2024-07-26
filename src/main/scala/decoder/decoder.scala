@@ -1,5 +1,6 @@
 import chisel3._
 import chisel3.util._
+import InstPacks._
 
 class inst_sel extends Bundle {
     val inst_add_w      = Bool()
@@ -89,34 +90,27 @@ class imm_sel extends Bundle {
     val imm_COP = Bool()
 }
 
-class decoder extends Module {
+class Decoder extends Module {
     val io = IO(new Bundle{
-        //指令
-        val inst = Input(UInt(32.W))
-
-        //寄存器
-        val rj = Output(UInt(5.W))
-        val rk = Output(UInt(5.W))
-        val rd = Output(UInt(5.W))
-        val rd_valid = Output(Bool())
-
-        //立即数
-        val imm = Output(UInt(32.W))
-
-        //指令性质
-        val br_type = Output(UInt(4.W))
-        val mem_type = Output(UInt(5.W))
-        val alu_op = Output(UInt(4.W))
-        val ins_type = Output(UInt(3.W))
-        val alu_sel_r1 = Output(UInt(1.W))
-        val alu_sel_r2 = Output(UInt(2.W))
-
-        //privillge_vector
-        val priv_vec = Output(UInt(13.W))
-
-        //exception vector
-        val exp = Output(UInt(8.W))
+        val inst_FQ = Input(new pack_PD)
+        val inst_ID = Output(new pack_ID)
     })
+    val rj          = Wire(UInt(5.W))
+    val rk          = Wire(UInt(5.W))
+    val rd          = Wire(UInt(5.W))
+    val rd_valid    = Wire(Bool())
+    val imm         = Wire(UInt(32.W))
+    val alu_op      = Wire(UInt(4.W))
+    val alu_rs1_sel = Wire(UInt(1.W))
+    val alu_rs2_sel = Wire(UInt(2.W))
+    val br_type     = Wire(UInt(4.W))
+    val mem_type    = Wire(UInt(5.W))
+    val priv_vec    = Wire(UInt(13.W))
+    val exception   = Wire(UInt(8.W))
+    val ins_type    = Wire(UInt(3.W))
+
+    val inst = io.inst_FQ.inst
+    val inst_ID = pack_ID(io.inst_FQ)
     //把指令码和寄存器编号转换为独热编码
     val inst_31_26 = Wire(UInt(64.W))
     val inst_25_22 = Wire(UInt(16.W))
@@ -126,13 +120,13 @@ class decoder extends Module {
     val inst_9_5 = Wire(UInt(32.W))
     val inst_4_0 = Wire(UInt(32.W))
 
-    inst_31_26 := UIntToOH(io.inst(31,26))
-    inst_25_22 := UIntToOH(io.inst(25,22))
-    inst_21_20 := UIntToOH(io.inst(21,20))
-    inst_19_15 := UIntToOH(io.inst(19,15))
-    inst_14_10 := UIntToOH(io.inst(14,10))
-    inst_9_5 := UIntToOH(io.inst(9,5))
-    inst_4_0 := UIntToOH(io.inst(4,0))
+    inst_31_26 := UIntToOH(inst(31,26))
+    inst_25_22 := UIntToOH(inst(25,22))
+    inst_21_20 := UIntToOH(inst(21,20))
+    inst_19_15 := UIntToOH(inst(19,15))
+    inst_14_10 := UIntToOH(inst(14,10))
+    inst_9_5 := UIntToOH(inst(9,5))
+    inst_4_0 := UIntToOH(inst(4,0))
 
     //给inst_sel赋值，确定指令类型
     val inst_sel = Wire(new inst_sel)
@@ -191,14 +185,14 @@ class decoder extends Module {
     inst_sel.inst_bge        := inst_31_26(0x19)
     inst_sel.inst_bltu       := inst_31_26(0x1a)
     inst_sel.inst_bgeu       := inst_31_26(0x1b)
-    inst_sel.inst_lu12i_w    := inst_31_26(0x05) & ~io.inst(25)
-    //inst_sel.inst_pcaddi     = inst_31_26(0x06) & ~io.inst(25)
-    inst_sel.inst_pcaddu12i  := inst_31_26(0x07) & ~io.inst(25)
-    inst_sel.inst_csrxchg    := inst_31_26(0x01) & ~io.inst(25) & ~io.inst(24) & (~inst_9_5(0x00) & ~inst_9_5(0x01))  //rj != 0,1
-    inst_sel.inst_ll_w       := inst_31_26(0x08) & ~io.inst(25) & ~io.inst(24)
-    inst_sel.inst_sc_w       := inst_31_26(0x08) & ~io.inst(25) &  io.inst(24)
-    inst_sel.inst_csrrd      := inst_31_26(0x01) & ~io.inst(25) & ~io.inst(24) & inst_9_5(0x00)
-    inst_sel.inst_csrwr      := inst_31_26(0x01) & ~io.inst(25) & ~io.inst(24) & inst_9_5(0x01)
+    inst_sel.inst_lu12i_w    := inst_31_26(0x05) & ~inst(25)
+    //inst_sel.inst_pcaddi     = inst_31_26(0x06) & ~inst(25)
+    inst_sel.inst_pcaddu12i  := inst_31_26(0x07) & ~inst(25)
+    inst_sel.inst_csrxchg    := inst_31_26(0x01) & ~inst(25) & ~inst(24) & (~inst_9_5(0x00) & ~inst_9_5(0x01))  //rj != 0,1
+    inst_sel.inst_ll_w       := inst_31_26(0x08) & ~inst(25) & ~inst(24)
+    inst_sel.inst_sc_w       := inst_31_26(0x08) & ~inst(25) &  inst(24)
+    inst_sel.inst_csrrd      := inst_31_26(0x01) & ~inst(25) & ~inst(24) & inst_9_5(0x00)
+    inst_sel.inst_csrwr      := inst_31_26(0x01) & ~inst(25) & ~inst(24) & inst_9_5(0x01)
     inst_sel.inst_rdcntid_w  := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x0) & inst_19_15(0x00) & inst_14_10(0x18) & inst_4_0(0x00)
     inst_sel.inst_rdcntvl_w  := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x0) & inst_19_15(0x00) & inst_14_10(0x18) & inst_9_5(0x00) & !inst_4_0(0x00)
     inst_sel.inst_rdcntvh_w  := inst_31_26(0x00) & inst_25_22(0x0) & inst_21_20(0x0) & inst_19_15(0x00) & inst_14_10(0x19) & inst_9_5(0x00)
@@ -261,7 +255,7 @@ class decoder extends Module {
                 inst_sel.inst_bge      |
                 inst_sel.inst_bltu     |
                 inst_sel.inst_bgeu     
-    io.rj := Mux(rj_sel, io.inst(19,15), 0.U)
+    rj := Mux(rj_sel, inst(19,15), 0.U)
 
     //rk赋值
     val rk_valid = Wire(Bool())
@@ -317,10 +311,10 @@ class decoder extends Module {
                 inst_sel.inst_bltu     |
                 inst_sel.inst_bgeu     
 
-    io.rk := Mux(rk_valid,Mux(rk_sel, io.inst(4,0), io.inst(14,10)), 0.U)
+    rk := Mux(rk_valid,Mux(rk_sel, inst(4,0), inst(14,10)), 0.U)
 
     //rd,rd_valid赋值
-    io.rd_valid := (inst_sel.inst_rdcntid_w| 
+    rd_valid := (inst_sel.inst_rdcntid_w| 
                     inst_sel.inst_rdcntvl_w|
                     inst_sel.inst_rdcntvh_w|
                     inst_sel.inst_add_w    |
@@ -367,9 +361,9 @@ class decoder extends Module {
                     inst_sel.inst_ld_bu    |
                     inst_sel.inst_ld_hu    |
                     inst_sel.inst_jirl     |
-                    inst_sel.inst_bl       ) & io.rd =/= 0.U(5.W)
+                    inst_sel.inst_bl       ) & rd =/= 0.U(5.W)
 
-    io.rd := Mux(inst_sel.inst_rdcntid_w, io.inst(9,5), Mux(inst_sel.inst_bl, 1.U(5.W), io.inst(4,0)))
+    rd := Mux(inst_sel.inst_rdcntid_w, inst(9,5), Mux(inst_sel.inst_bl, 1.U(5.W), inst(4,0)))
 
     //立即数生成器
     val imm_sel = Wire(new imm_sel)
@@ -450,19 +444,19 @@ class decoder extends Module {
     imm_sel.imm_COP :=  inst_sel.inst_cacop    |
                         inst_sel.inst_invtlb
     val imm_type = imm_sel.asUInt
-    io.imm := Mux1H(Seq(
+    imm := Mux1H(Seq(
         imm_type(11) -> 0.U(32.W),
-        imm_type(10) -> Cat(0.U(27.W), io.inst(14, 10)),
-        imm_type(9) -> Cat(0.U(20.W), io.inst(21, 10)),
-        imm_type(8) -> Cat(Fill(20, io.inst(21)), io.inst(21, 10)),
-        imm_type(7) -> Cat(Fill(18, io.inst(21)), io.inst(21, 10), 0.U(2.W)),
-        imm_type(6) -> Cat(Fill(14, io.inst(25)), io.inst(25, 10), 0.U(2.W)),
-        imm_type(5) -> Cat(io.inst(24, 5), 0.U(12.W)),
-        imm_type(4) -> Cat(Fill(4, io.inst(9)), io.inst(9, 0), io.inst(25, 10), 0.U(2.W)),
-        imm_type(3) -> Cat(0.U(18.W), io.inst(23, 10)),
+        imm_type(10) -> Cat(0.U(27.W), inst(14, 10)),
+        imm_type(9) -> Cat(0.U(20.W), inst(21, 10)),
+        imm_type(8) -> Cat(Fill(20, inst(21)), inst(21, 10)),
+        imm_type(7) -> Cat(Fill(18, inst(21)), inst(21, 10), 0.U(2.W)),
+        imm_type(6) -> Cat(Fill(14, inst(25)), inst(25, 10), 0.U(2.W)),
+        imm_type(5) -> Cat(inst(24, 5), 0.U(12.W)),
+        imm_type(4) -> Cat(Fill(4, inst(9)), inst(9, 0), inst(25, 10), 0.U(2.W)),
+        imm_type(3) -> Cat(0.U(18.W), inst(23, 10)),
         imm_type(2) -> 0x40.U(32.W),
         imm_type(1) -> 0x6.U(32.W),
-        imm_type(0) -> Cat(Fill(15, io.inst(21)), io.inst(21, 10), io.inst(4, 0)),
+        imm_type(0) -> Cat(Fill(15, inst(21)), inst(21, 10), inst(4, 0)),
     ))
 
     //br_type
@@ -476,7 +470,7 @@ class decoder extends Module {
                 inst_sel.inst_b        |
                 inst_sel.inst_bl       |
                 inst_sel.inst_jirl
-    io.br_type := Mux(br_valid, io.inst(29,26), 0.U(4.W))
+    br_type := Mux(br_valid, inst(29,26), 0.U(4.W))
 
     //mem_type
     val mem_valid = Wire(Bool())
@@ -490,7 +484,7 @@ class decoder extends Module {
                 inst_sel.inst_ld_hu    |
                 inst_sel.inst_ll_w     |
                 inst_sel.inst_sc_w
-    io.mem_type := mem_valid ## Mux(mem_valid, io.inst(25,22), 0.U(4.W))
+    mem_type := mem_valid ## Mux(mem_valid, inst(25,22), 0.U(4.W))
 
     //alu_op
     val alu_op_sel = Wire(Vec(11,Bool()))
@@ -519,10 +513,10 @@ class decoder extends Module {
                      inst_sel.inst_srli_w
     alu_op_sel(10):= inst_sel.inst_sra_w | 
                      inst_sel.inst_srai_w
-    io.alu_op := OHToUInt(alu_op_sel)  
+    alu_op := OHToUInt(alu_op_sel)  
 
     //ins_type
-    io.ins_type :=  (inst_sel.inst_add_w    |
+    ins_type    := (inst_sel.inst_add_w    |
                     inst_sel.inst_sub_w    |
                     inst_sel.inst_slt      |
                     inst_sel.inst_sltu     |
@@ -578,14 +572,16 @@ class decoder extends Module {
                     inst_sel.inst_ld_bu    |
                     inst_sel.inst_ld_hu)  
 
-    //alu_sel_r1 
-    io.alu_sel_r1 :=   inst_sel.inst_pcaddu12i|
+    //alu_rs1_sel 
+    alu_rs1_sel :=   inst_sel.inst_pcaddu12i|
                     inst_sel.inst_jirl     |
                     inst_sel.inst_bl
-
-    //alu_sel_r2
-    val alu_sel_r2 = Wire(Vec(2,Bool()))
-    alu_sel_r2(0):= inst_sel.inst_rdcntvl_w|
+    //alu_rs2_sel 
+    alu_rs2_sel :=  (inst_sel.inst_rdcntvl_w|
+                    inst_sel.inst_rdcntvh_w|
+                    inst_sel.inst_jirl     |
+                    inst_sel.inst_bl) ##
+                   (inst_sel.inst_rdcntvl_w|
                     inst_sel.inst_add_w    |
                     inst_sel.inst_sub_w    |
                     inst_sel.inst_slt      |
@@ -603,54 +599,53 @@ class decoder extends Module {
                     inst_sel.inst_div_w    |
                     inst_sel.inst_mod_w    |
                     inst_sel.inst_div_wu   |
-                    inst_sel.inst_mod_wu   
-    alu_sel_r2(1):= inst_sel.inst_rdcntvl_w|
-                    inst_sel.inst_rdcntvh_w|
-                    inst_sel.inst_jirl     |
-                    inst_sel.inst_bl
-    io.alu_sel_r2 := alu_sel_r2.asUInt       
+                    inst_sel.inst_mod_wu)
 
    //priv_vec
-   val priv_vec = Wire(Vec(13,Bool()))
-   priv_vec(0) :=   inst_sel.inst_rdcntid_w|
-                    inst_sel.inst_csrrd    |
-                    inst_sel.inst_csrwr    |
-                    inst_sel.inst_csrxchg  |
-                    inst_sel.inst_cacop    |
-                    inst_sel.inst_tlbsrch  |
-                    inst_sel.inst_tlbrd    |
-                    inst_sel.inst_tlbwr    |
-                    inst_sel.inst_tlbfill  |
-                    inst_sel.inst_ertn     |
-                    inst_sel.inst_idle     |
-                    inst_sel.inst_invtlb   |
-                    inst_sel.inst_ll_w     |
-                    inst_sel.inst_sc_w     
-    priv_vec(1) :=  inst_sel.inst_csrwr
-    priv_vec(2) :=  inst_sel.inst_csrxchg
-    priv_vec(3) :=  inst_sel.inst_ertn
-    priv_vec(4) :=  inst_sel.inst_tlbrd
-    priv_vec(5) :=  inst_sel.inst_tlbwr
-    priv_vec(6) :=  inst_sel.inst_tlbfill
-    priv_vec(7) :=  inst_sel.inst_tlbsrch
-    priv_vec(8) :=  inst_sel.inst_invtlb
-    priv_vec(9) :=  inst_sel.inst_idle
-    priv_vec(10):=  inst_sel.inst_cacop
-    priv_vec(11):=  inst_sel.inst_ll_w
-    priv_vec(12):=  inst_sel.inst_sc_w
-    io.priv_vec := priv_vec.asUInt
+    priv_vec := {
+        val priv_vec = Wire(Vec(13,Bool()))
+        priv_vec(1) :=  inst_sel.inst_csrwr
+        priv_vec(2) :=  inst_sel.inst_csrxchg
+        priv_vec(3) :=  inst_sel.inst_ertn
+        priv_vec(4) :=  inst_sel.inst_tlbrd
+        priv_vec(5) :=  inst_sel.inst_tlbwr
+        priv_vec(6) :=  inst_sel.inst_tlbfill
+        priv_vec(7) :=  inst_sel.inst_tlbsrch
+        priv_vec(8) :=  inst_sel.inst_invtlb
+        priv_vec(9) :=  inst_sel.inst_idle
+        priv_vec(10):=  inst_sel.inst_cacop
+        priv_vec(11):=  inst_sel.inst_ll_w
+        priv_vec(12):=  inst_sel.inst_sc_w
+        priv_vec(0) :=  inst_sel.inst_rdcntid_w|
+                        inst_sel.inst_csrrd    |
+                        VecInit(priv_vec.drop(1)).asUInt.orR
+        priv_vec.asUInt
+    }
 
     //exception vector
     val ine_sel = Wire(Bool())
     ine_sel := ~inst_sel.asUInt.orR
     when(ine_sel){
-        io.exp := 0x8d.U(8.W)
+        exception := 0x8d.U(8.W)
     }.elsewhen(inst_sel.inst_break){
-        io.exp := 0xc.U(8.W)
+        exception := 0xc.U(8.W)
     }.elsewhen(inst_sel.inst_syscall){
-        io.exp := 0x8b.U(8.W)
+        exception := 0x8b.U(8.W)
     }.otherwise{
-        io.exp := 0x00.U(8.W)
-    }              
+        exception := 0x00.U(8.W)
+    }
+
+    inst_ID.rj := rj
+    inst_ID.rk := rk
+    inst_ID.rd := rd
+    inst_ID.rd_valid := rd_valid
+    inst_ID.imm := imm
+    inst_ID.alu_op := alu_op
+    inst_ID.alu_rs1_sel := alu_rs1_sel
+    inst_ID.br_type := br_type
+    inst_ID.mem_type := mem_type
+    inst_ID.priv_vec := priv_vec
+    inst_ID.ins_type := ins_type
+
+    io.inst_ID := inst_ID
 }
-                
