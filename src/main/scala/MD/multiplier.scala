@@ -30,7 +30,7 @@ class multiplier extends Module{
     src1 := Cat(Mux(io.op(1), 0.U(34.W), Fill(34,io.src1(31))),io.src1)
     val src2 = Wire(UInt(66.W))
     src2 := Cat(Mux(io.op(1), 0.U(34.W), Fill(34,io.src2(31))),io.src2)
-    val booth_res = Wire(VecInit.tabulate(17)(i => Booth(src1(65-2*i,0) ## 0.U((2*i).W),(if(i==0) src2(1, 0) ## 0.U(1.W) else src2(2*i+1, 2*i-1)), 66)))
+    val booth_res = VecInit.tabulate(17)(i => Booth(src1(65-2*i,0) ## 0.U((2*i).W),(if(i==0) src2(1, 0) ## 0.U(1.W) else src2(2*i+1, 2*i-1)), 66))
     val booth_reg = RegInit(VecInit.fill(17)(0.U(66.W)))
     when(!io.busy){
         booth_reg := booth_res
@@ -96,7 +96,7 @@ class multiplier extends Module{
     temp6(1) := t6(131,66)
 
     //register of the wallet tree's result
-    val tree_temp = RegInit(Vec(2,0.U(66.W)))
+    val tree_temp = RegInit(VecInit.fill(2)(0.U(66.W)))
     when(!io.busy){
         tree_temp := temp6
     }

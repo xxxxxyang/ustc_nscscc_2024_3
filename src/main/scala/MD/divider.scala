@@ -11,12 +11,12 @@ class divider extends Module{
         val inst_valid = Input(Bool())
         val busy = Output(Bool())
     })
-
+    val cnt = RegInit(0.U(6.W))
     //stage 1 —— preparation
     //inst_valid register
-    val inst_valid = RegInit(false.B)
+    val en = RegInit(false.B)
     when(!io.busy){
-        inst_valid := io.inst_valid
+        en := io.op(2) & io.inst_valid
     }
     //src1 absolute value
     val ab_scr1 = RegInit(0.U(32.W))
@@ -50,13 +50,10 @@ class divider extends Module{
     }
     //offset
     val offset = Wire(UInt(6.W))
-    offset := (H1_src1 + 32.U) - H1_src2
+    offset := Mux((H1_src1 <= H1_src2), (H1_src1 + 32.U) - H1_src2, 33.U)
     //cnt_init
     val cnt_init = Wire(UInt(6.W))
-    cnt_init := (H1_src2 + 1.U) - H1_src1
-    //enable value
-    val en = Wire(Bool())
-    en := op_stage1(2) & inst_valid & (H1_src1 <= H1_src2)
+    cnt_init := Mux((H1_src1 <= H1_src2), (H1_src2 + 1.U) - H1_src1, 0.U)
 
     //stage 2 —— calculation
     //src2 absolute value
@@ -82,12 +79,8 @@ class divider extends Module{
         quo := Mux(sel,quo(63,32)-ab_scr2_stage2,quo(63,32)) ## quo(31,0) ## sel
     }.elsewhen(en){
         quo := (0.U(33.W) ## ab_scr1) << offset
-    }.otherwise{
-        quo := ab_scr1 ## 0.U(33.W)
     }
-
     //counter
-    val cnt = RegInit(0.U(6.W))
     when(cnt =/= 0.U){
         cnt := cnt - 1.U
     }.elsewhen(en){
