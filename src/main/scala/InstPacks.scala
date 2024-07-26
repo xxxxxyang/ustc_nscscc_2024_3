@@ -2,14 +2,18 @@ import chisel3._
 import chisel3.util._
 import Configs._
 object InstPacks {
-    class pack_PD extends Bundle{
+    class pack_PF extends Bundle{
         val inst_valid      = Bool()
         val pc              = UInt(32.W)
-        val inst            = UInt(32.W)
+        val pred_valid      = Bool()
         val pred_jump       = Bool()
         val pred_npc        = UInt(32.W)
         val exception       = UInt(8.W)
     }
+    class pack_IF extends pack_PF{
+        val inst            = UInt(32.W)
+    }
+    class pack_PD extends pack_IF{}
     class pack_ID extends pack_PD{
         val rj              = UInt(5.W)
         val rk              = UInt(5.W)
