@@ -637,7 +637,7 @@ class Decoder extends Module {
     when(ine_sel){
         exception := 0x8d.U(8.W)
     }.elsewhen(inst_sel.inst_break){
-        exception := 0xc.U(8.W)
+        exception := 0x8c.U(8.W)
     }.elsewhen(inst_sel.inst_syscall){
         exception := 0x8b.U(8.W)
     }.otherwise{

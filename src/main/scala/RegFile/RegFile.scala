@@ -5,18 +5,18 @@ import Interfaces._
 import InstPacks._
 import Util._
 
-class RegFile(n: Int) extends Module{
+class RegFile() extends Module{
     val io = IO(new Bundle{
-        val prj       = Input(Vec(4, UInt(log2Ceil(n).W)))
-        val prk       = Input(Vec(4, UInt(log2Ceil(n).W)))
+        val prj       = Input(Vec(4, UInt(PREG_W.W)))
+        val prk       = Input(Vec(4, UInt(PREG_W.W)))
         val prj_data  = Output(Vec(4, UInt(32.W)))
         val prk_data  = Output(Vec(4, UInt(32.W)))
     
-        val prd       = Input(Vec(4, UInt(log2Ceil(n).W)))
+        val prd       = Input(Vec(4, UInt(PREG_W.W)))
         val wdata     = Input(Vec(4, UInt(32.W)))
         val we        = Input(Vec(4, Bool()))
     })
-    val rf = RegInit(VecInit.fill(n)(0.U(32.W)))
+    val rf = RegInit(VecInit.fill(PREG_SIZE)(0.U(32.W)))
 
     for(i <- 0 until 4){
         when(io.we(i)){

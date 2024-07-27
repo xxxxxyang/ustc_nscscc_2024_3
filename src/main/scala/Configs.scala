@@ -8,6 +8,7 @@ object Configs{
     val FQ_SIZE    = 8 //每个fetch queue的长度
     val FQ_W       = log2Ceil(FQ_SIZE)
     val PC_RESET   = 0x1C000000.U(32.W)
+    val IQ_SIZE    = Seq(8, 8, 8, 8)
 }
 
 object Predict_Config {

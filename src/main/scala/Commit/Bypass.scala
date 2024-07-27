@@ -2,7 +2,7 @@ import chisel3._
 import chisel3.util._
 import Configs._
 
-class Bypass(n: Int) extends Module {
+class Bypass() extends Module {
     val io = IO(new Bundle{
         //wb: ALU1, ALU2, LS
         val rd_valid_wb      = Input(Vec(3, Bool()))
