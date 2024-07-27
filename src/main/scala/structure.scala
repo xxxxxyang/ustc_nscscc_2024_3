@@ -29,7 +29,7 @@ object control_signal{
     val BR       = 2.U(3.W)
     val LS       = 3.U(3.W)
     val ARITH    = 4.U(3.W)
-    
+
     // alu_rs1_sel
     val RS1_REG  = 0.U(1.W)
     val RS1_PC   = 1.U(1.W)

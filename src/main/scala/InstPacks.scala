@@ -2,14 +2,18 @@ import chisel3._
 import chisel3.util._
 import Configs._
 object InstPacks {
-    class pack_PD extends Bundle{
+    class pack_PF extends Bundle{
         val inst_valid      = Bool()
         val pc              = UInt(32.W)
-        val inst            = UInt(32.W)
+        val pred_valid      = Bool()
         val pred_jump       = Bool()
         val pred_npc        = UInt(32.W)
         val exception       = UInt(8.W)
     }
+    class pack_IF extends pack_PF{
+        val inst            = UInt(32.W)
+    }
+    class pack_PD extends pack_IF{}
     class pack_ID extends pack_PD{
         val rj              = UInt(5.W)
         val rk              = UInt(5.W)
@@ -22,12 +26,12 @@ object InstPacks {
         val br_type         = UInt(4.W)
         val mem_type        = UInt(5.W)
         val priv_vec        = UInt(13.W)
-        val fu_id           = UInt(3.W)
+        val ins_type        = UInt(3.W)
     }
     class pack_RN extends pack_ID{
-        val prj             = UInt(log2Ceil(PREG_SIZE).W)
-        val prk             = UInt(log2Ceil(PREG_SIZE).W)
-        val prd             = UInt(log2Ceil(PREG_SIZE).W)
-        val pprd            = UInt(log2Ceil(PREG_SIZE).W)
+        val prj             = UInt(PREG_W.W)
+        val prk             = UInt(PREG_W.W)
+        val prd             = UInt(PREG_W.W)
+        val pprd            = UInt(PREG_W.W)
     }
 }
