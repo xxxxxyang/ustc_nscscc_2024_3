@@ -54,6 +54,6 @@ class Rename(n:Int) extends Module {
     crat.io.arch_rat_valid := io.arch_rat_valid
     crat.io.wake_preg := io.wake_preg
     crat.io.wake_valid := io.wake_valid
-    crat.io.prj_ready := io.prj_ready
-    crat.io.prk_ready := io.prk_ready
+    io.prj_ready := crat.io.prj_ready
+    io.prk_ready := crat.io.prk_ready
 }

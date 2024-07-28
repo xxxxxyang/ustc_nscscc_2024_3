@@ -31,8 +31,10 @@ class IssueQueue(n: Int, ordered: Boolean) extends Module{
         // 发射
         val issue_inst  = Output(new pack_DP)
         val issue_valid = Output(Bool())
+        val to_wake     = Output(UInt(PREG_W.W))
 
-        val stall       = Input(Bool())
+        val stall       = Input(Bool()) // stall pop
+        val stall_in    = Input(Bool()) // stall insert
         val flush       = Input(Bool())
         val full        = Output(Bool())
     })
@@ -52,12 +54,14 @@ class IssueQueue(n: Int, ordered: Boolean) extends Module{
         is_pop := ready(0) && !io.stall
         pop    := VecInit.tabulate(n)(i => (i == 0).B)
         io.issue_inst  := queue(0).inst
+        io.to_wake := Mux(is_pop && io.issue_inst.rd_valid, io.issue_inst.prd, 0.U)
     } else {
         is_pop := ready.asUInt.orR && !io.stall
         pop    := Mux(is_pop,
             VecInit(PriorityEncoderOH(ready)),
             VecInit.fill(n)(false.B))
         io.issue_inst  := Mux1H(pop, queue)
+        io.to_wake := Mux(is_pop && io.issue_inst.rd_valid, io.issue_inst.prd, 0.U)
     }
     
     io.issue_valid := is_pop
@@ -81,6 +85,10 @@ class IssueQueue(n: Int, ordered: Boolean) extends Module{
     tail := tail_pop + in_count
     mask := Mux(io.insts_valid.asUInt.andR, mask_add2(mask_pop),
             Mux(io.insts_valid.asUInt.orR,  mask_add1(mask_pop), mask_pop))
+    when(io.stall_in){
+        tail := tail_pop
+        mask := mask_pop
+    }
 
     for(i <- 0 until n){
         val queue_nxt = Wire(new IQ_Item)
@@ -102,5 +110,9 @@ class IssueQueue(n: Int, ordered: Boolean) extends Module{
             queue_nxt.prk_ready := true.B
         }
         queue(i) := queue_nxt
+    }
+    when(io.flush){
+        tail := 0.U
+        mask := 0.U
     }
 } 

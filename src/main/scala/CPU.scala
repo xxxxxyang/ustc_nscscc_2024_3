@@ -200,9 +200,21 @@ class CPU extends Module {
     rob.io.stall := dr_stall
 
     val insts_DP = VecInit.tabulate(2)(i => pack_DP(insts_RN(i), rob.io.rob_index(i)))
-    
+
     // issue -------------------------------------
     iq1.io.insts        := insts_DP
     iq1.io.insts_valid  := dp.io.inst_valid(0)
+    iq1.io.prj_ready    := rename.io.prj_ready
+    iq1.io.prk_ready    := rename.io.prk_ready
+    iq1.io.stall        := false.B
+    iq1.io.stall_in     := iq_full || rob.io.full
+    iq1.io.flush        := predict_fail
 
+    iq2.io.insts        := insts_DP
+    iq2.io.insts_valid  := dp.io.inst_valid(0)
+    iq2.io.prj_ready    := rename.io.prj_ready
+    iq2.io.prk_ready    := rename.io.prk_ready
+    iq2.io.stall        := false.B
+    iq2.io.stall_in     := iq_full || rob.io.full
+    iq2.io.flush        := predict_fail
 }
