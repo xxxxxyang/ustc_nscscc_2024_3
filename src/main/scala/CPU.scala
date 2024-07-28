@@ -94,6 +94,7 @@ class CPU extends Module {
         inst.pred_valid := predict.io.pred_valid
         inst.pred_jump  := predict.io.pred_jump
         inst.pred_npc   := predict.io.pred_npc
+        inst.br_cnt     := predict.io.br_cnt(i)
         inst.exception  := pc.io.exception
         inst
     })
