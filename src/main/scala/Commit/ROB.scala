@@ -12,12 +12,16 @@ import Util.wrap
 // ROB表项 见P323
 class ROB_Item() extends Bundle{
     val exception   = UInt(8.W)
-    val typ         = UInt(2.W)              // 类型 (store, br, .. ) 
     val rd          = UInt(5.W)              // 目的逻辑寄存器 (rd)
     val rd_valid    = Bool()                 // 是否写
     val prd         = UInt(PREG_W.W)         // 物理寄存器
     val pprd        = UInt(PREG_W.W)         // 原物理寄存器
-    val pc          = UInt(32.W)          
+    val pc          = UInt(32.W)
+    val is_store    = Bool()
+    val is_br       = Bool()
+    val br_type     = UInt(2.W)              // 用于分支预测
+    val priv_vec    = UInt(13.W)
+    val inst        = UInt(32.W)             // debug
     val complete    = Bool()
 }
 
@@ -25,11 +29,13 @@ class ROB() extends Module{
     val io = IO(new Bundle{
         //约定：发不出2条指令就全别发，dp_valid = 0
         val dp_valid        = Input(Bool())                    // dp 有效
-        val dp              = Vec(2, Flipped(new DP_to_ROB))
+        val dp              = Input(Vec(2, new DP_to_ROB))
+        val rob_index       = Output(Vec(2, UInt(ROB_W.W)))
         val wb              = Input(Vec(4, new WB_to_ROB))
         val arat            = Output(Vec(2, new ROB_to_ARAT))
         val predict_fail    = Input(Bool())
         val full            = Output(Bool())
+        val stall           = Input(Bool())
     })
 
     //rob表 2*(ROB_SIZE/2)
@@ -43,17 +49,21 @@ class ROB() extends Module{
     
     // dp: 接收dispatch的输入，填入新表项，tail++，返回rob_index
     for(i <- 0 until 2) {
-        io.dp(i).rob_index := 0.U; // default
+        io.rob_index(i) := 0.U; // default
         when(io.dp_valid) {
             rob(i)(tail).exception := io.dp(i).exception
-            rob(i)(tail).typ       := io.dp(i).typ
             rob(i)(tail).rd        := io.dp(i).rd
             rob(i)(tail).rd_valid  := io.dp(i).rd_valid
             rob(i)(tail).prd       := io.dp(i).prd
             rob(i)(tail).pprd      := io.dp(i).pprd
             rob(i)(tail).pc        := io.dp(i).pc
+            rob(i)(tail).is_store  := io.dp(i).is_store
+            rob(i)(tail).is_br     := io.dp(i).is_br
+            rob(i)(tail).br_type   := io.dp(i).br_type
+            rob(i)(tail).priv_vec  := io.dp(i).priv_vec
+            rob(i)(tail).inst      := io.dp(i).inst
             rob(i)(tail).complete  := false.B
-            io.dp(i).rob_index := Cat(tail, i.U)
+            io.rob_index(i) := Cat(tail, i.U)
             tail := tail + 1.U
         }
     }
