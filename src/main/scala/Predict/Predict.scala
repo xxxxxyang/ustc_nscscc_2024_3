@@ -19,6 +19,7 @@ class Predict_IO extends Bundle{
     val pred_jump           = Output(Vec(2, Bool()))
     val pred_valid          = Output(Vec(2, Bool()))
     val pred_npc            = Output(UInt(32.W))
+    val br_cnt              = Output(Vec(2, UInt(2.W)))  // 饱和计数器值随流水线流动直到提交
 
     // commit info from ROB
     val pc_cmt              = Input(UInt(32.W))  // 一周期内最多提交一条分支指令
@@ -26,6 +27,7 @@ class Predict_IO extends Bundle{
     val branch_target       = Input(UInt(32.W))
     val update_en           = Input(Bool())
     val br_type             = Input(UInt(2.W))
+    val cmt_br_cnt          = Input(UInt(2.W))  // 提交时的饱和计数器值
 
     // recover info 
     val top_arch            = Input(UInt(3.W))
@@ -60,18 +62,26 @@ class Predict extends Module {
         ghr := ghr(GHR_WIDTH - 2, 0) ## jump
     }
 
-    val pht_rindex = (ghr ^ pc(PHT_INDEX_WIDTH + 2, PHT_INDEX_WIDTH - GHR_WIDTH + 3)) ## pc(PHT_INDEX_WIDTH - GHR_WIDTH + 2, 3)
+    val pht_rindex = (ghr ^ npc(PHT_INDEX_WIDTH + 2, PHT_INDEX_WIDTH - GHR_WIDTH + 3)) ## npc(PHT_INDEX_WIDTH - GHR_WIDTH + 2, 3)
 
     // PHT 模式历史表
-    val pht = RegInit(VecInit.fill(2)(VecInit.fill(PHT_DEPTH)(2.U(2.W))))
-    val pht_rdata = VecInit.tabulate(2)(i => pht(i)(pht_rindex))
+    val pht = VecInit.fill(2)(Module(new xilinx_simple_dual_port_1_clock_ram_read_first(2, PHT_DEPTH)).io)
     val pht_windex = (ghr ^ pc_cmt(PHT_INDEX_WIDTH + 2, PHT_INDEX_WIDTH - GHR_WIDTH + 3)) ## pc_cmt(PHT_INDEX_WIDTH - GHR_WIDTH + 2, 3)
-    val pht_raw_rdata = pht(pc_col)(pht_windex)
-
-    when(update_en){
-        pht(pc_col)(pht_windex) := Mux(io.real_jump, 
-                pht_raw_rdata + (pht_raw_rdata =/= 3.U), pht_raw_rdata - (pht_raw_rdata =/= 0.U))
+    val pht_wdata = Mux(io.real_jump, 
+        io.cmt_br_cnt + (io.cmt_br_cnt =/= 3.U), io.cmt_br_cnt - (io.cmt_br_cnt =/= 0.U)
+    )
+    val pht_rdata = Wire(Vec(2, UInt(2.W)))
+    
+    for(i <- 0 until 2){
+        pht(i).addra   := pht_windex
+        pht(i).addrb   := pht_rindex
+        pht(i).dina    := pht_wdata
+        pht(i).clka    := clock
+        pht(i).wea     := update_en && (i.U === pc_col)
+        pht_rdata(i)   := pht(i).doutb
     }
+
+    io.br_cnt := pht_rdata
     
     // BTB 分支目标缓存
     val btb_tag     = VecInit.fill(2)(Module(new xilinx_simple_dual_port_1_clock_ram_read_first(BTB_TAG_WIDTH+1, BTB_DEPTH)).io)

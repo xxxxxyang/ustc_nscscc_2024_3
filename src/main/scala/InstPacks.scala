@@ -9,6 +9,7 @@ object InstPacks {
         val pred_jump       = Bool()
         val pred_npc        = UInt(32.W)
         val exception       = UInt(8.W)
+        val br_cnt          = UInt(2.W)
     }
     class pack_IF extends pack_PF{
         val inst            = UInt(32.W)
