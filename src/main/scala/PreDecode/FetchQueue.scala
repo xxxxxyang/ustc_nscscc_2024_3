@@ -55,9 +55,18 @@ class FetchQueue() extends Module{
 
     // dequeue
     val empty = (tail & head).orR
-    io.out_pack  := queue.map(Mux1H(head, _)) // 总是输出head这一行，但不一定valid
+    io.out_pack  := queue.map(Mux1H(head, _))
     io.out_valid := !empty
+    when(!io.out_valid){
+        io.out_pack(0).inst_valid := false.B
+        io.out_pack(1).inst_valid := false.B
+    }
     when(!empty && !io.stall){
         head := shift1(head)
+    }
+
+    when(io.flush){
+        head := 1.U
+        tail := 1.U
     }
 } 

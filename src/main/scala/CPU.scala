@@ -4,6 +4,7 @@ import Configs._
 import Interfaces._
 import InstPacks._
 import Util._
+import control_signal._
 
 class CPU extends Module {
     val io = IO(new Bundle{
@@ -50,7 +51,7 @@ class CPU extends Module {
     val pd = Module(new PreDecode)
     val fq = Module(new FetchQueue)
     // ID
-    val decode = Module(new Decoder)
+    val decode = Seq(Module(new Decoder), Module(new Decoder))
     val freelist = Module(new FreeList(PREG_SIZE))
     // Rename
     val rename = Module(new Rename(PREG_SIZE))
@@ -72,25 +73,34 @@ class CPU extends Module {
     val rob    = Module(new ROB)
     val arat   = Module(new ARAT)
     val bypass = Module(new Bypass)
+
+    //global signals
+    val predict_fail  = Wire(Bool())
+    val branch_target = Wire(UInt(32.W))
+    val iq_full       = Wire(Bool())
     // ======================================
     // pre fetch
-    pc.io.stall         := false.B
+    val icache_waiting = !icache.io.inst_valid || icache.io.has_cacop_IF
+    pc.io.stall         := fq.io.full || icache_waiting
     pc.io.pred_jump     := predict.io.pred_jump
     pc.io.pred_npc      := predict.io.pred_npc
-    pc.io.predict_fail  := false.B
-    pc.io.branch_target := 0.U
+    pc.io.predict_fail  := predict_fail
+    pc.io.branch_target := branch_target
     pc.io.pd_fix_en     := pd.io.pd_fix_en
     pc.io.pd_fix_target := pd.io.pd_fix_target
-    pc.io.idle_start    := false.B
+    pc.io.idle_start    := false.B 
     pc.io.idle_intr     := false.B
 
     predict.io.pc       := pc.io.pc
     predict.io.npc      := pc.io.npc
+    predict.io.pd_fix_en    := pd.io.pd_fix_en
+    predict.io.pd_fix_is_bl := pd.io.pd_fix_is_bl
+    predict.io.pd_fix_pc    := pd.io.pd_fix_pc
 
     val insts_PF = VecInit.tabulate(2)(i => {
         val inst = Wire(new pack_PF)
         inst.inst_valid := pc.io.inst_valid(i)
-        inst.pc         := pc.io.pc
+        inst.pc         := pc.io.pc + (i*4).U
         inst.pred_valid := predict.io.pred_valid
         inst.pred_jump  := predict.io.pred_jump
         inst.pred_npc   := predict.io.pred_npc
@@ -99,7 +109,99 @@ class CPU extends Module {
     })
 
     // PF-IF
-    val insts_IF = reg1(insts_PF, false.B, false.B)
-    // instruction fetch
+    val insts_PF_IF = reg1(insts_PF,
+        fq.io.full || icache_waiting, //pi stall
+        predict_fail || !fq.io.full && pd.io.pd_fix_en) //pi flush
+    // instruction fetch ------------------------
+    icache.io.rvalid_IF  := true.B
+    icache.io.addr_IF    := pc.io.pc
+    icache.io.paddr_IF   := pc.io.pc // todo: mmu
+    icache.io.exception  := 0.U
+    icache.io.uncache_IF := false.B
+    icache.io.cacop_en   := false.B
+    icache.io.cacop_op   := 0.U
+    icache.io.stall      := fq.io.full
+    val insts_IF = VecInit.tabulate(2)(i =>
+        pack_IF(insts_PF_IF(i), icache.io.inst(i)))
+
+    // IF-PD
+    val insts_IF_PD = reg1(insts_IF,
+        fq.io.full, //ip stall
+        predict_fail || !fq.io.full && (pd.io.pd_fix_en || !icache.io.inst_valid)) //ip flush
+
+    // pre decode -------------------------------
+    pd.io.insts := insts_IF_PD
+    fq.io.in_pack := pd.io.insts_PD
+    fq.io.stall   := rob.io.full || iq_full || freelist.io.empty
+    fq.io.flush   := predict_fail
+
+    // instruction decode -----------------------
+    decode(0).io.inst_FQ := fq.io.out_pack(0)
+    decode(1).io.inst_FQ := fq.io.out_pack(1)
+    val insts_ID = VecInit.tabulate(2)(i => decode(i).io.inst_ID)
+
+    freelist.io.rd_valid     := insts_ID.map(_.rd_valid)
+    freelist.io.rename_en    := VecInit.fill(2)(fq.io.out_valid && !fq.io.stall)
+    freelist.io.predict_fail := reg1(predict_fail)
+    freelist.io.head_arch    := arat.head
+    freelist.io.commit_en         := rob.io.arat.map(_.commit_en)
+    freelist.io.commit_pprd_valid := rob.io.arat.map(_.rd_valid)
+    freelist.io.commit_pprd       := rob.io.arat.map(_.pprd)
+
+    // ID-RN
+    val dr_stall = rob.io.full || iq_full
+    val dr_flush = predict_fail || (!dr_stall && freelist.io.empty)
+    val insts_ID_RN   = reg1(insts_ID, dr_stall, dr_flush)
+    val alloc_preg_RN = reg1(freelist.io.alloc_preg, dr_stall, dr_flush)
+
+    // rename ------------------------------------
+    rename.io.rj             := insts_ID_RN.map(_.rj)
+    rename.io.rk             := insts_ID_RN.map(_.rk)
+    rename.io.rd             := insts_ID_RN.map(_.rd)
+    rename.io.rd_valid       := insts_ID_RN.map(_.rd_valid)
+    rename.io.rename_en      := insts_ID_RN.map(_.inst_valid && !dr_stall)
+    rename.io.predict_fail   := reg1(predict_fail)
+    rename.io.arch_rat_valid := arat.io.arat
+    rename.io.alloc_preg     := alloc_preg_RN
+    //todo: wake
     
+    val insts_RN = VecInit.tabulate(2)(i =>
+        pack_RN(insts_ID_RN(i), rename.io.prj(i), rename.io.prk(i), rename.io.prd(i), rename.io.pprd(i)))
+
+    dp.io.inst_pack := insts_RN
+    dp.io.elem      := VecInit(iq1.io.elem_num, iq2.io.elem_num)
+    
+    rob.io.dp_valid := insts_RN(0).inst_valid
+    rob.io.dp := VecInit.tabulate(2)(i =>  {
+        val item = Wire(new DP_to_ROB)
+        val inst = insts_RN(i)
+        item.exception  := inst.exception
+        item.rd         := inst.rd
+        item.rd_valid   := inst.rd_valid
+        item.prd        := inst.prd
+        item.pprd       := inst.pprd
+        item.pc         := inst.pc
+        item.is_store   := inst.mem_type(2)
+        item.is_br      := inst.br_type.orR
+        item.br_type    := {
+            import Predict_Config._
+            val typ = WireDefault(ELSE)
+            when(inst.br_type === BR_BL){ typ := BL }
+            .elsewhen(inst.br_type === BR_JIRL){
+                when     (inst.rd === 1.U){ typ := ICALL }
+                .elsewhen(inst.rj === 1.U){ typ := RET }
+            }
+            typ
+        }
+        item.priv_vec   := inst.priv_vec
+        item.inst
+    })
+    rob.io.stall := dr_stall
+
+    val insts_DP = VecInit.tabulate(2)(i => pack_DP(insts_RN(i), rob.io.rob_index(i)))
+    
+    // issue -------------------------------------
+    iq1.io.insts        := insts_DP
+    iq1.io.insts_valid  := dp.io.inst_valid(0)
+
 }

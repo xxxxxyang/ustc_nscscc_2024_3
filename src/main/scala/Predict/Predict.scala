@@ -34,9 +34,9 @@ class Predict_IO extends Bundle{
     val ghr_arch            = Input(UInt(GHR_WIDTH.W))
 
     // from pre-decode
-    val pd_pred_fix         = Input(Bool())
-    val pd_pred_fix_is_bl   = Input(Bool())
-    val pd_pc_plus_4        = Input(UInt(32.W))
+    val pd_fix_en           = Input(Bool())
+    val pd_fix_is_bl        = Input(Bool())
+    val pd_fix_pc           = Input(UInt(32.W))
 
 }
 class Predict extends Module {
@@ -52,7 +52,7 @@ class Predict extends Module {
 
     // GHR 全局历史寄存器
     val ghr = RegInit(0.U(GHR_WIDTH.W))
-    val sel_pred = pred_valid.asUInt.orR && !io.pd_pred_fix
+    val sel_pred = pred_valid.asUInt.orR && !io.pd_fix_en
     val jump = (pred_valid.asUInt & pred_jump.asUInt).orR
     when(io.predict_fail){
         ghr := io.ghr_arch
@@ -115,9 +115,9 @@ class Predict extends Module {
     when(io.predict_fail){
         top             := io.top_arch
         ras             := io.ras_arch
-    }.elsewhen(io.pd_pred_fix && io.pd_pred_fix_is_bl){
+    }.elsewhen(io.pd_fix_en && io.pd_fix_is_bl){
         top             := top + 1.U
-        ras(top + 1.U)  := io.pd_pc_plus_4
+        ras(top + 1.U)  := io.pd_fix_pc
     }.elsewhen(btb_rdata(pred_hit_index).typ(1) && pred_valid(pred_hit_index)){
         top             := top + 1.U
         ras(top + 1.U)  := pc(31, 3) ## pred_hit_index ## 0.U(2.W)

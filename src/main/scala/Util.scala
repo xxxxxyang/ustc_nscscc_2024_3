@@ -21,7 +21,7 @@ object Util {
         val n = a.getWidth
         0.U(1.W) ## a(n - 1, 1)
     }
-    def reg1[T <: Data](a: T, stall: Bool, flush: Bool): T = {
+    def reg1[T <: Data](a: T, stall: Bool = false.B, flush: Bool = false.B): T = {
         val reg = RegInit(0.U.asTypeOf(a))
         when(flush){
             reg := 0.U.asTypeOf(a)
