@@ -23,6 +23,7 @@ object InstPacks {
             b.pred_jump  := a.pred_jump
             b.pred_npc   := a.pred_npc
             b.exception  := a.exception
+            b.br_cnt     := a.br_cnt
             b.inst       := inst
             b
         }
@@ -57,6 +58,7 @@ object InstPacks {
             b.pred_jump  := a.pred_jump
             b.pred_npc   := a.pred_npc
             b.exception  := a.exception
+            b.br_cnt     := a.br_cnt
             b.inst       := a.inst
             b.rj         := a.rj
             b.rk         := a.rk
@@ -89,6 +91,7 @@ object InstPacks {
             b.pred_jump  := a.pred_jump
             b.pred_npc   := a.pred_npc
             b.exception  := a.exception
+            b.br_cnt     := a.br_cnt
             b.inst       := a.inst
             b.rj         := a.rj
             b.rk         := a.rk
