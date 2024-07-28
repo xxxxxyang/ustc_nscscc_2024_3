@@ -20,7 +20,7 @@ object CPU_Main extends App {
     }
     
     ChiselStage.emitSystemVerilogFile(
-        new Predict, 
+        new SB(4), 
         Array("-td", "build/"),
         firtoolOpts = firtool_options,
     )
