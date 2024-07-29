@@ -78,6 +78,9 @@ class CPU extends Module {
     val predict_fail  = Wire(Bool())
     val branch_target = Wire(UInt(32.W))
     val iq_full       = Wire(Bool())
+    val dcache_miss_hazard = Wire(Bool())
+    val sb_full_hazard     = Wire(Bool())
+    val sb_cmt_hazard      = Wire(Bool())
     // ======================================
     // pre fetch
     val icache_waiting = !icache.io.inst_valid || icache.io.has_cacop_IF
@@ -202,19 +205,54 @@ class CPU extends Module {
     val insts_DP = VecInit.tabulate(2)(i => pack_DP(insts_RN(i), rob.io.rob_index(i)))
 
     // issue -------------------------------------
+    iq_full := iq0.io.full || iq1.io.full || iq2.io.full || iq3.io.full
+
+    iq0.io.insts        := insts_DP
+    iq0.io.insts_valid  := dp.io.inst_valid(0)
+    iq0.io.prj_ready    := rename.io.prj_ready
+    iq0.io.prk_ready    := rename.io.prk_ready
+    iq0.io.stall        := ir_reg0.io.stall || reg1(ir_reg0.io.stall)
+    iq0.io.stall_in     := iq_full || rob.io.full
+    iq0.io.flush        := predict_fail
+
     iq1.io.insts        := insts_DP
-    iq1.io.insts_valid  := dp.io.inst_valid(0)
+    iq1.io.insts_valid  := dp.io.inst_valid(1)
     iq1.io.prj_ready    := rename.io.prj_ready
     iq1.io.prk_ready    := rename.io.prk_ready
     iq1.io.stall        := false.B
     iq1.io.stall_in     := iq_full || rob.io.full
     iq1.io.flush        := predict_fail
+    
 
     iq2.io.insts        := insts_DP
-    iq2.io.insts_valid  := dp.io.inst_valid(0)
+    iq2.io.insts_valid  := dp.io.inst_valid(2)
     iq2.io.prj_ready    := rename.io.prj_ready
     iq2.io.prk_ready    := rename.io.prk_ready
     iq2.io.stall        := false.B
     iq2.io.stall_in     := iq_full || rob.io.full
     iq2.io.flush        := predict_fail
+
+    iq3.io.insts        := insts_DP
+    iq3.io.insts_valid  := dp.io.inst_valid(3)
+    iq3.io.prj_ready    := rename.io.prj_ready
+    iq3.io.prk_ready    := rename.io.prk_ready
+    iq3.io.stall        := ir_reg3.io.stall || reg1(ir_reg3.io.stall)
+    iq3.io.stall_in     := iq_full || rob.io.full
+    iq3.io.flush        := predict_fail
+
+    val iq_self_wake_preg = VecInit(Mux(!mdu.io.busy, md_ex2_ex3_reg.io.inst_pack_EX2.prd, 0.U),sel1.io.wake_preg, sel2.io.wake_preg, re_reg3.io.inst_pack_EX.prd)
+    val iq_mutual_wake_preg = VecInit(Mux(!mdu.io.busy, md_ex2_ex3_reg.io.inst_pack_EX2.prd, 0.U),ir_reg1.io.inst_pack_RF.prd,ir_reg2.io.inst_pack_RF.prd,Mux(!dcache.io.cache_miss_MEM(4), re_reg3.io.inst_pack_EX.prd, 0.U))
+
+    iq0.io.wake_preg := VecInit(iq_self_wake_preg(0),iq_mutual_wake_preg(1),iq_mutual_wake_preg(2),iq_mutual_wake_preg(3))
+    iq1.io.wake_preg := VecInit(iq_mutual_wake_preg(0),iq_self_wake_preg(1),iq_self_wake_preg(2),iq_mutual_wake_preg(3))
+    iq2.io.wake_preg := VecInit(iq_mutual_wake_preg(0),iq_self_wake_preg(1),iq_self_wake_preg(2),iq_mutual_wake_preg(3))
+    iq3.io.wake_preg := VecInit(iq_mutual_wake_preg(0),iq_mutual_wake_preg(1),iq_mutual_wake_preg(2),iq_self_wake_preg(3))
+    //未完成的变量赋值
+    dcache_miss_hazard := dcache.io.cache_miss
+    sb_full_hazard := sb.io.full && re_reg3.io.is_store
+    sb_cmt_hazard := sb.io.wb_valid && ir_reg3.io.is_ls
+    val ir_reg3.io.stall := dcache_miss_hazard || sb_full_hazard || sb_cmt_hazard
+    val ir_reg0.io.stall := mdu.io.busy
+    
+
 }
