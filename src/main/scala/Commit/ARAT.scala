@@ -11,6 +11,12 @@ class ARAT() extends Module{
         // rename阶段，用于恢复cRAT
         val arat        = Output(Vec(PREG_SIZE, Bool()))
         val head        = Output(UInt(PREG_W.W))
+        // 恢复ras
+        val br_type        = Input(UInt(2.W))
+        val pc_cmt         = Input(UInt(32.W))
+        val pred_update_en = Input(Bool())
+        val top            = Output(UInt(3.W))
+        val ras            = Output(Vec(8, UInt(32.W)))
     })
     val arat = RegInit(VecInit.fill(PREG_SIZE)(false.B))
     val head = RegInit(0.U(PREG_W.W))
@@ -26,4 +32,15 @@ class ARAT() extends Module{
     head := wrap(head +& PopCount(rd_write), PREG_SIZE.U)
     io.arat := arat
     io.head := head
+    // ras
+    val top = RegInit(7.U(3.W))
+    val ras = RegInit(VecInit.fill(8)(PC_RESET))
+    when(io.br_type === RET && io.pred_update_en){
+        top := top - 1.U
+    }.elsewhen(io.br_type(1) && io.pred_update_en){
+        top := top + 1.U
+        ras(top) := io.pc_cmt
+    }
+    io.top := top
+    io.ras := ras
 } 
