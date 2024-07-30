@@ -86,7 +86,7 @@ object control_signal{
     val INE       = 0x8d.U(8.W)
 }
 
-object CSR {
+object CSR_CODE {
     val CSR_CRMD        = 0x0.U(14.W)
     val CSR_PRMD        = 0x1.U(14.W)
     val CSR_EUEN        = 0x2.U(14.W)

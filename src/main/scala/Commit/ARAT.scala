@@ -4,6 +4,7 @@ import java.{util => ju}
 import Configs._
 import Interfaces._
 import Util.wrap
+import Predict_Config._
 
 class ARAT() extends Module{
     val io = IO(new Bundle{

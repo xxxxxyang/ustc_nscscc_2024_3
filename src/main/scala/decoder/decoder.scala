@@ -119,6 +119,7 @@ class Decoder extends Module {
     inst_ID.pred_npc   := io.inst_FQ.pred_npc
     inst_ID.exception  := io.inst_FQ.exception
     inst_ID.inst       := io.inst_FQ.inst
+    inst_ID.br_cnt     := io.inst_FQ.br_cnt
 
     //把指令码和寄存器编号转换为独热编码
     val inst_31_26 = Wire(UInt(64.W))
@@ -264,7 +265,7 @@ class Decoder extends Module {
                 inst_sel.inst_bge      |
                 inst_sel.inst_bltu     |
                 inst_sel.inst_bgeu     
-    rj := Mux(rj_sel, inst(19,15), 0.U)
+    rj := Mux(rj_sel, inst(9,5), 0.U)
 
     //rk赋值
     val rk_valid = Wire(Bool())
@@ -289,10 +290,6 @@ class Decoder extends Module {
                 inst_sel.inst_mod_wu   |
                 inst_sel.inst_csrwr    |
                 inst_sel.inst_csrxchg  |
-                inst_sel.inst_tlbsrch  |
-                inst_sel.inst_tlbrd    |
-                inst_sel.inst_tlbwr    |
-                inst_sel.inst_tlbfill  |
                 inst_sel.inst_invtlb   |
                 inst_sel.inst_sc_w     |
                 inst_sel.inst_st_b     |
@@ -493,7 +490,7 @@ class Decoder extends Module {
                 inst_sel.inst_ld_hu    |
                 inst_sel.inst_ll_w     |
                 inst_sel.inst_sc_w
-    mem_type := mem_valid ## Mux(mem_valid, inst(25,22), 0.U(4.W))
+    mem_type := mem_valid ## Mux(mem_valid, inst(25,24), 0.U(2.W)) ## Mux(inst_sel.inst_ll_w || inst_sel.inst_sc_w, 2.U(2.W), Mux(mem_valid, inst(23,22), 0.U(2.W)))
 
     //alu_op
     val alu_op_sel = Wire(Vec(11,Bool()))

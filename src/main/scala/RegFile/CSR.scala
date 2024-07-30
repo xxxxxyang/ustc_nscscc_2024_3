@@ -1,7 +1,7 @@
 import chisel3._
 import chisel3.util._
 import exception_code._
-import CSR._
+import CSR_CODE._
 
 class CSR_REG extends Bundle {
     val crmd        = UInt(32.W)
@@ -137,7 +137,7 @@ class CSR(timer_width: Int) extends Module{
 
     // ESTAT: 例外状态
     when(io.exception(7)){
-        estat := 0.U(9.W) ## exception(6, 0) ## estat(15, 0)
+        estat := 0.U(9.W) ## io.exception(6, 0) ## estat(15, 0)
     }.elsewhen(io.we && io.waddr === CSR_ESTAT){
         estat := 0.U(1.W) ## estat(30, 16) ## 0.U(3.W) ## io.ip_int ## time_int ## 0.U(1.W) ## io.interrupt ## io.wdata(1, 0)
     }.otherwise{
@@ -149,7 +149,7 @@ class CSR(timer_width: Int) extends Module{
     when(io.exception(7)){
         era := io.pc_exp
     }.elsewhen(io.we && io.waddr === CSR_ERA){
-        era := wdata
+        era := io.wdata
     }
 
     // BADV：出错虚地址
