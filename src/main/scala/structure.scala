@@ -79,3 +79,21 @@ object control_signal{
     val BR_BLTU = 10.U(4.W)
     val BR_BGEU = 11.U(4.W)
 }
+
+class TLB_Entry extends Bundle{
+    val vppn = UInt(19.W)
+    val ps   = UInt(6.W)
+    val g    = Bool()
+    val asid = UInt(10.W)
+    val e    = Bool()
+    val ppn0 = UInt(20.W)
+    val plv0 = UInt(2.W)
+    val mat0 = UInt(2.W)
+    val d0   = Bool()
+    val v0   = Bool()
+    val ppn1 = UInt(20.W)
+    val plv1 = UInt(2.W)
+    val mat1 = UInt(2.W)
+    val d1   = Bool()
+    val v1   = Bool()
+}
