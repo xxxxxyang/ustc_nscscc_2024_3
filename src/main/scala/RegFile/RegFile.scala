@@ -5,7 +5,7 @@ import Interfaces._
 import InstPacks._
 import Util._
 
-class RegFile() extends Module{
+class RegFile extends Module{
     val io = IO(new Bundle{
         val prj       = Input(Vec(4, UInt(PREG_W.W)))
         val prk       = Input(Vec(4, UInt(PREG_W.W)))

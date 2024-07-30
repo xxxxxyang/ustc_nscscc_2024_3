@@ -64,11 +64,16 @@ class CPU extends Module {
     // RF
     val rf = Module(new RegFile)
     // EX
+    val mdu = Module(new MDU)
+
     val alu1 = Module(new ALU)
     val cnt  = Module(new CounterModule)
 
     val alu2 = Module(new ALU)
     val br   = Module(new Branch)
+
+    val dcache = Module(new Dcache)
+    val sb = Module(new SB)
     // WB
     val rob    = Module(new ROB)
     val arat   = Module(new ARAT)
@@ -207,13 +212,16 @@ class CPU extends Module {
     // issue -------------------------------------
     iq_full := iq0.io.full || iq1.io.full || iq2.io.full || iq3.io.full
 
+    val ir0_stall        = mdu.io.busy 
     iq0.io.insts        := insts_DP
     iq0.io.insts_valid  := dp.io.inst_valid(0)
     iq0.io.prj_ready    := rename.io.prj_ready
     iq0.io.prk_ready    := rename.io.prk_ready
-    iq0.io.stall        := ir_reg0.io.stall || reg1(ir_reg0.io.stall)
+    iq0.io.stall        := ir0_stall || reg1(ir0_stall)
     iq0.io.stall_in     := iq_full || rob.io.full
     iq0.io.flush        := predict_fail
+    val inst_iq0 = iq0.io.issue_inst
+    inst_iq0.inst_valid := iq0.io.issue_valid
 
     iq1.io.insts        := insts_DP
     iq1.io.insts_valid  := dp.io.inst_valid(1)
@@ -222,7 +230,8 @@ class CPU extends Module {
     iq1.io.stall        := false.B
     iq1.io.stall_in     := iq_full || rob.io.full
     iq1.io.flush        := predict_fail
-    
+    val inst_iq1 = iq1.io.issue_inst
+    inst_iq1.inst_valid := iq1.io.issue_valid
 
     iq2.io.insts        := insts_DP
     iq2.io.insts_valid  := dp.io.inst_valid(2)
@@ -231,14 +240,22 @@ class CPU extends Module {
     iq2.io.stall        := false.B
     iq2.io.stall_in     := iq_full || rob.io.full
     iq2.io.flush        := predict_fail
+    val inst_iq2 = iq2.io.issue_inst
+    inst_iq2.inst_valid := iq2.io.issue_valid
 
+    dcache_miss_hazard  := dcache.io.cache_miss
+    sb_full_hazard      := sb.io.full && re_reg3.io.is_store
+    sb_cmt_hazard       := sb.io.wb_valid && ir_reg3.io.is_ls
+    val ir3_stall        = dcache_miss_hazard || sb_full_hazard || sb_cmt_hazard
     iq3.io.insts        := insts_DP
     iq3.io.insts_valid  := dp.io.inst_valid(3)
     iq3.io.prj_ready    := rename.io.prj_ready
     iq3.io.prk_ready    := rename.io.prk_ready
-    iq3.io.stall        := ir_reg3.io.stall || reg1(ir_reg3.io.stall)
+    iq3.io.stall        := ir3_stall || reg1(ir3_stall)
     iq3.io.stall_in     := iq_full || rob.io.full
     iq3.io.flush        := predict_fail
+    val inst_iq3 = iq3.io.issue_inst
+    inst_iq3.inst_valid := iq3.io.issue_valid
 
     val iq_self_wake_preg = VecInit(Mux(!mdu.io.busy, md_ex2_ex3_reg.io.inst_pack_EX2.prd, 0.U),sel1.io.wake_preg, sel2.io.wake_preg, re_reg3.io.inst_pack_EX.prd)
     val iq_mutual_wake_preg = VecInit(Mux(!mdu.io.busy, md_ex2_ex3_reg.io.inst_pack_EX2.prd, 0.U),ir_reg1.io.inst_pack_RF.prd,ir_reg2.io.inst_pack_RF.prd,Mux(!dcache.io.cache_miss_MEM(4), re_reg3.io.inst_pack_EX.prd, 0.U))
@@ -248,11 +265,42 @@ class CPU extends Module {
     iq2.io.wake_preg := VecInit(iq_mutual_wake_preg(0),iq_self_wake_preg(1),iq_self_wake_preg(2),iq_mutual_wake_preg(3))
     iq3.io.wake_preg := VecInit(iq_mutual_wake_preg(0),iq_mutual_wake_preg(1),iq_mutual_wake_preg(2),iq_self_wake_preg(3))
     //未完成的变量赋值
-    dcache_miss_hazard := dcache.io.cache_miss
-    sb_full_hazard := sb.io.full && re_reg3.io.is_store
-    sb_cmt_hazard := sb.io.wb_valid && ir_reg3.io.is_ls
-    val ir_reg3.io.stall := dcache_miss_hazard || sb_full_hazard || sb_cmt_hazard
-    val ir_reg0.io.stall := mdu.io.busy
-    
 
+    // IS-RF
+    val inst_rf0 = reg1(inst_iq0, ir0_stall, predict_fail)
+    val inst_rf1 = reg1(inst_iq1, false.B,   predict_fail)
+    val inst_rf2 = reg1(inst_iq2, false.B,   predict_fail)
+    val inst_rf3 = reg1(inst_iq3, ir3_stall, predict_fail)
+    val prj_data_rf3 = reg_fw(rf.io.prj_data(3),
+        bypass.io.forward_prj_en(3), bypass.io.forward_prj_data(3),
+        ir3_stall, predict_fail)
+    val prk_data_rf3 = reg_fw(rf.io.prk_data(3),
+        bypass.io.forward_prk_en(3), bypass.io.forward_prk_data(3),
+        ir3_stall, predict_fail)
+    
+    // regfile read -------------------------
+    rf.io.prj := VecInit(inst_rf0.prj, inst_rf1.prj, inst_rf2.prj, inst_iq3.prj)
+    rf.io.prk := VecInit(inst_rf0.prk, inst_rf1.prk, inst_rf2.prk, inst_iq3.prk)
+    //todo: CSR read for MD pipeline (0)
+    //todo: RF stage for LS pipeline (3)
+    // RF-EX
+    val prj_data_ex0 = reg_fw(rf.io.prj_data(0),
+        bypass.io.forward_prj_en(0), bypass.io.forward_prj_data(0),
+        mdu.io.busy, predict_fail)
+    val prk_data_ex0 = reg_fw(rf.io.prk_data(0),
+        bypass.io.forward_prk_en(0), bypass.io.forward_prk_data(0),
+        mdu.io.busy, predict_fail)
+    val prj_data_ex1 = reg_fw(rf.io.prj_data(1),
+        bypass.io.forward_prj_en(1), bypass.io.forward_prj_data(1),
+        false.B, predict_fail)
+    val prk_data_ex1 = reg_fw(rf.io.prk_data(1),
+        bypass.io.forward_prk_en(1), bypass.io.forward_prk_data(1),
+        false.B, predict_fail)
+    val prj_data_ex2 = reg_fw(rf.io.prj_data(2),
+        bypass.io.forward_prj_en(2), bypass.io.forward_prj_data(2),
+        false.B, predict_fail)
+    val prk_data_ex2 = reg_fw(rf.io.prk_data(2),
+        bypass.io.forward_prk_en(2), bypass.io.forward_prk_data(2),
+        false.B, predict_fail)
+    
 }

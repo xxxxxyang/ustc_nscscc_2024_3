@@ -30,4 +30,15 @@ object Util {
         }
         reg
     }
+    def reg_fw[T <: Data](a: T, forward_en: Bool, forward_data: T, stall: Bool = false.B, flush: Bool = false.B): T = {
+        val reg = RegInit(0.U.asTypeOf(a))
+        when(flush){
+            reg := 0.U.asTypeOf(a)
+        }.elsewhen(!stall){
+            reg := a
+        }.elsewhen(forward_en){
+            reg := forward_data
+        }
+        Mux(forward_en, forward_data, reg)
+    }
 }
