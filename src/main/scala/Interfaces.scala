@@ -25,9 +25,13 @@ object Interfaces {
      * (写寄存器和分支失败不进ROB)
      */
     class WB_to_ROB() extends Bundle{
-        val v           = Bool()                 // 有效
-        val rob_index   = UInt(ROB_W.W)
-        val exception   = UInt(8.W)              // 后端产生的异常
+        val valid         = Bool()                 // 有效
+        val rob_index     = UInt(ROB_W.W)
+        val exception     = UInt(8.W)              // 后端产生的异常
+        val predict_fail  = Bool()
+        val real_jump     = Bool()
+        val branch_target = UInt(32.W)
+        val rf_wdata      = UInt(32.W)             // debug
     }
 
     class ROB_to_ARAT() extends Bundle{

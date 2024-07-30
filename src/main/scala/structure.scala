@@ -118,3 +118,21 @@ object CSR {
     val CSR_DMW0        = 0x180.U(14.W)
     val CSR_DMW1        = 0x181.U(14.W)
 }
+
+class TLB_Entry extends Bundle{
+    val vppn = UInt(19.W)
+    val ps   = UInt(6.W)
+    val g    = Bool()
+    val asid = UInt(10.W)
+    val e    = Bool()
+    val ppn0 = UInt(20.W)
+    val plv0 = UInt(2.W)
+    val mat0 = UInt(2.W)
+    val d0   = Bool()
+    val v0   = Bool()
+    val ppn1 = UInt(20.W)
+    val plv1 = UInt(2.W)
+    val mat1 = UInt(2.W)
+    val d1   = Bool()
+    val v1   = Bool()
+}
