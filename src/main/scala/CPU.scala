@@ -284,6 +284,13 @@ class CPU extends Module {
     //todo: CSR read for MD pipeline (0)
     //todo: RF stage for LS pipeline (3)
     // RF-EX
+    val inst_ex0 = reg1(inst_rf0, mdu.io.busy, predict_fail)
+    val inst_ex1 = reg1(inst_rf0, false.B, predict_fail)
+    val inst_ex2 = reg1(inst_rf0, false.B, predict_fail)
+    val re3_stall = dcache_miss_hazard || sb_full_hazard 
+    val re3_flush = predict_fail || !re3_stall && sb_cmt_hazard
+    val inst_ex3 = reg1(inst_rf0, re3_stall, re3_flush)
+
     val prj_data_ex0 = reg_fw(rf.io.prj_data(0),
         bypass.io.forward_prj_en(0), bypass.io.forward_prj_data(0),
         mdu.io.busy, predict_fail)
@@ -302,5 +309,7 @@ class CPU extends Module {
     val prk_data_ex2 = reg_fw(rf.io.prk_data(2),
         bypass.io.forward_prk_en(2), bypass.io.forward_prk_data(2),
         false.B, predict_fail)
-    
+    // val prj_data_ex3 = 
+    // execute -------------------------
+    // alu1.io.alu_op := 
 }
