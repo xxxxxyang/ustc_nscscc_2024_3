@@ -121,8 +121,8 @@ class CPU extends Module {
         val inst = Wire(new pack_PF)
         inst.inst_valid := pc.io.inst_valid(i)
         inst.pc         := pc.io.pc + (i*4).U
-        inst.pred_valid := predict.io.pred_valid
-        inst.pred_jump  := predict.io.pred_jump
+        inst.pred_valid := predict.io.pred_valid(i)
+        inst.pred_jump  := predict.io.pred_jump(i)
         inst.pred_npc   := predict.io.pred_npc
         inst.br_cnt     := predict.io.br_cnt(i)
         inst.exception  := pc.io.exception
@@ -164,7 +164,7 @@ class CPU extends Module {
     freelist.io.rd_valid     := insts_ID.map(_.rd_valid)
     freelist.io.rename_en    := VecInit.fill(2)(fq.io.out_valid && !fq.io.stall)
     freelist.io.predict_fail := reg1(predict_fail)
-    freelist.io.head_arch    := arat.head
+    freelist.io.head_arch    := arat.io.head
     freelist.io.commit_en         := rob.io.arat.map(_.commit_en)
     freelist.io.commit_pprd_valid := rob.io.arat.map(_.rd_valid)
     freelist.io.commit_pprd       := rob.io.arat.map(_.pprd)
@@ -222,7 +222,7 @@ class CPU extends Module {
         }
         item.br_cnt     := inst.br_cnt
         item.priv_vec   := inst.priv_vec
-        item.inst
+        item
     })
     rob.io.stall := dr_stall
 
@@ -239,7 +239,7 @@ class CPU extends Module {
     iq0.io.stall        := ir0_stall || reg1(ir0_stall)
     iq0.io.stall_in     := iq_full || rob.io.full
     iq0.io.flush        := predict_fail
-    val inst_iq0 = iq0.io.issue_inst
+    val inst_iq0 = WireDefault(iq0.io.issue_inst)
     inst_iq0.inst_valid := iq0.io.issue_valid
 
     iq1.io.insts        := insts_DP
@@ -249,7 +249,7 @@ class CPU extends Module {
     iq1.io.stall        := false.B
     iq1.io.stall_in     := iq_full || rob.io.full
     iq1.io.flush        := predict_fail
-    val inst_iq1 = iq1.io.issue_inst
+    val inst_iq1 = WireDefault(iq1.io.issue_inst)
     inst_iq1.inst_valid := iq1.io.issue_valid
 
     iq2.io.insts        := insts_DP
@@ -259,7 +259,7 @@ class CPU extends Module {
     iq2.io.stall        := false.B
     iq2.io.stall_in     := iq_full || rob.io.full
     iq2.io.flush        := predict_fail
-    val inst_iq2 = iq2.io.issue_inst
+    val inst_iq2 = WireDefault(iq2.io.issue_inst)
     inst_iq2.inst_valid := iq2.io.issue_valid
 
     dcache_miss_hazard  := dcache.io.cache_miss
@@ -273,8 +273,11 @@ class CPU extends Module {
     iq3.io.stall        := ir3_stall || reg1(ir3_stall)
     iq3.io.stall_in     := iq_full || rob.io.full
     iq3.io.flush        := predict_fail
-    val inst_iq3 = iq3.io.issue_inst
+    val inst_iq3 = WireDefault(iq3.io.issue_inst)
     inst_iq3.inst_valid := iq3.io.issue_valid
+
+    val inst_rf1 = Wire(new pack_DP)
+    val inst_rf2 = Wire(new pack_DP)
 
     val iq_self_wake_preg = VecInit(Mux(!mdu.io.busy, inst_ex0_2.prd, 0.U), iq1.io.to_wake, iq2.io.to_wake, inst_ex3.prd)
     val iq_mutual_wake_preg = VecInit(Mux(!mdu.io.busy, inst_ex0_2.prd, 0.U), inst_rf1.prd, inst_rf2.prd, Mux(!dcache_miss_hazard, inst_ex3.prd, 0.U))
@@ -287,8 +290,8 @@ class CPU extends Module {
 
     // IS-RF
     val inst_rf0 = reg1(inst_iq0, ir0_stall, predict_fail)
-    val inst_rf1 = reg1(inst_iq1, false.B,   predict_fail)
-    val inst_rf2 = reg1(inst_iq2, false.B,   predict_fail)
+        inst_rf1:= reg1(inst_iq1, false.B,   predict_fail)
+        inst_rf2:= reg1(inst_iq2, false.B,   predict_fail)
         inst_rf3:= reg1(inst_iq3, ir3_stall, predict_fail)
     val imm_rf3 = reg1(Mux(inst_iq3.priv_vec(10), Fill(5, inst_iq3.imm(31)) ## inst_iq3.imm(31, 5), inst_iq3.imm), ir3_stall, predict_fail)
     val prj_data_rf3 = reg_fw(rf.io.prj_data(3),
@@ -344,7 +347,7 @@ class CPU extends Module {
 
     rob.io.ex.priv_vec      := inst_ex0.priv_vec(9, 0)
     rob.io.ex.csr_addr      := inst_ex0.imm(13, 0)
-    rob.io.ex.tlb_entry     := 0.U // todo: MMU
+    rob.io.ex.tlb_entry     := 0.U.asTypeOf(new TLB_Entry) // todo: MMU
     rob.io.ex.invtlb_op     := inst_ex0.imm(4, 0)
     rob.io.ex.invtlb_asid   := prj_data_ex0(9, 0)
     rob.io.ex.invtlb_vaddr  := prk_data_ex0
@@ -474,9 +477,9 @@ class CPU extends Module {
 
     bypass.io.prj_ex := VecInit(inst_ex0.prj, inst_ex1.prj, inst_ex2.prj, inst_rf3.prj)
     bypass.io.prk_ex := VecInit(inst_ex0.prk, inst_ex1.prk, inst_ex2.prk, inst_rf3.prk)
-    bypass.io.prd_wb := rf.io.prd
-    bypass.io.rd_valid_wb := rf.io.we
-    bypass.io.prd_wdata_wb := rf.io.wdata
+    bypass.io.prd_wb := rf.io.prd.drop(1)
+    bypass.io.rd_valid_wb := rf.io.we.drop(1)
+    bypass.io.prd_wdata_wb := rf.io.wdata.drop(1)
 
     rob.io.wb := VecInit(
         {val wb = Wire(new WB_to_ROB)

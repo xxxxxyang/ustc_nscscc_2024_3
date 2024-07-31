@@ -19,7 +19,7 @@ class Rename(n:Int) extends Module {
         val prk_ready = Output(Vec(2,Bool()))       //rk物理寄存器的ready信号
 
         val predict_fail = Input(Bool())             //分支预测错误信号
-        val arch_rat_valid = Input(Vec(32,Bool()))   //ROB维护的architectural RAT中valid位的信息
+        val arch_rat_valid = Input(Vec(n,Bool()))   //ROB维护的architectural RAT中valid位的信息
 
         val rename_en = Input(Vec(2,Bool()))                //重命名使能信号,若开启则会使CRAT锁定
 

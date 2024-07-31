@@ -1,4 +1,4 @@
-/*import chisel3._
+import chisel3._
 import chisel3.util._
 import Configs._
 import Interfaces._
@@ -69,4 +69,4 @@ class FetchQueue() extends Module{
         head := 1.U
         tail := 1.U
     }
-} */
+} 

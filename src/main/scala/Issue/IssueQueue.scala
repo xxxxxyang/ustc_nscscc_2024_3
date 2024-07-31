@@ -60,7 +60,7 @@ class IssueQueue(n: Int, ordered: Boolean) extends Module{
         pop    := Mux(is_pop,
             VecInit(PriorityEncoderOH(ready)),
             VecInit.fill(n)(false.B))
-        io.issue_inst  := Mux1H(pop, queue)
+        io.issue_inst  := Mux1H(pop, queue).inst
         io.to_wake := Mux(is_pop && io.issue_inst.rd_valid, io.issue_inst.prd, 0.U)
     }
     
