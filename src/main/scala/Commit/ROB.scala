@@ -92,6 +92,8 @@ class ROB() extends Module{
         val idle_en_cmt       = Output(Bool())
         val llbit_set_cmt     = Output(Bool())
         val llbit_clear_cmt   = Output(Bool())
+        
+        val rob_index_cmt     = Output(UInt(PREG_W.W))
     })
 
     //rob表 2*(ROB_SIZE/2)
@@ -235,4 +237,6 @@ class ROB() extends Module{
     io.idle_en_cmt   := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(9))
     io.llbit_set_cmt   := reg1(update_item.is_priv_ls && priv_ls_buf.priv_vec(1))
     io.llbit_clear_cmt := reg1(update_item.is_priv_ls && priv_ls_buf.priv_vec(2))
+
+    io.rob_index_cmt := reg1(head)
 } 
