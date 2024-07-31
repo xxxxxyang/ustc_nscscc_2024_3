@@ -257,7 +257,8 @@ class CSR(timer_width: Int) extends Module{
     }.elsewhen(tcfg(0) === 1.U && tval === 0.U && tval_priv === 1.U){
         time_int := true.B
     }
-    io.rdata := WireDefault(0.U(32.W))
+
+    io.rdata := 0.U
     switch(io.raddr){
         is(CSR_CRMD)        { io.rdata := crmd }
         is(CSR_PRMD)        { io.rdata := prmd }
