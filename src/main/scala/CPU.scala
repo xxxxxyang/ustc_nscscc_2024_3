@@ -106,6 +106,16 @@ class CPU extends Module {
     predict.io.pd_fix_en    := pd.io.pd_fix_en
     predict.io.pd_fix_is_bl := pd.io.pd_fix_is_bl
     predict.io.pd_fix_pc    := pd.io.pd_fix_pc
+    predict.io.update_en     := rob.io.pred.update_en
+    predict.io.branch_target := rob.io.pred.branch_target
+    predict.io.pc_cmt        := rob.io.pred.pc_cmt
+    predict.io.real_jump     := rob.io.pred.real_jump
+    predict.io.br_type       := rob.io.pred.br_type
+    predict.io.cmt_br_cnt    := rob.io.pred.br_cnt
+    predict.io.top_arch     := arat.io.top
+    predict.io.ras_arch     := arat.io.ras
+    predict.io.predict_fail := predict_fail
+    //todo: ghr_arch
 
     val insts_PF = VecInit.tabulate(2)(i => {
         val inst = Wire(new pack_PF)
@@ -174,7 +184,13 @@ class CPU extends Module {
     rename.io.predict_fail   := reg1(predict_fail)
     rename.io.arch_rat_valid := arat.io.arat
     rename.io.alloc_preg     := alloc_preg_RN
-    //todo: wake
+
+    val inst_ex0_2 = Wire(new pack_DP)
+    val inst_rf3   = Wire(new pack_DP)
+    val inst_ex3   = Wire(new pack_DP)
+
+    rename.io.wake_preg  := VecInit(inst_ex0_2.prd, iq1.io.to_wake, iq2.io.to_wake, inst_ex3.prd)
+    rename.io.wake_valid := VecInit(!mdu.io.busy, iq1.io.issue_valid, iq2.io.issue_valid, !dcache_miss_hazard)
     
     val insts_RN = VecInit.tabulate(2)(i =>
         pack_RN(insts_ID_RN(i), rename.io.prj(i), rename.io.prk(i), rename.io.prd(i), rename.io.pprd(i)))
@@ -204,6 +220,7 @@ class CPU extends Module {
             }
             typ
         }
+        item.br_cnt     := inst.br_cnt
         item.priv_vec   := inst.priv_vec
         item.inst
     })
@@ -272,7 +289,7 @@ class CPU extends Module {
     val inst_rf0 = reg1(inst_iq0, ir0_stall, predict_fail)
     val inst_rf1 = reg1(inst_iq1, false.B,   predict_fail)
     val inst_rf2 = reg1(inst_iq2, false.B,   predict_fail)
-    val inst_rf3 = reg1(inst_iq3, ir3_stall, predict_fail)
+        inst_rf3:= reg1(inst_iq3, ir3_stall, predict_fail)
     val imm_rf3 = reg1(Mux(inst_iq3.priv_vec(10), Fill(5, inst_iq3.imm(31)) ## inst_iq3.imm(31, 5), inst_iq3.imm), ir3_stall, predict_fail)
     val prj_data_rf3 = reg_fw(rf.io.prj_data(3),
         bypass.io.forward_prj_en(3), bypass.io.forward_prj_data(3),
@@ -287,14 +304,13 @@ class CPU extends Module {
     
     csr.io.raddr := inst_rf0.imm(13, 0)
 
-    //todo: RF stage for LS pipeline (3)
     // RF-EX
     val inst_ex0 = reg1(inst_rf0, mdu.io.busy, predict_fail)
     val inst_ex1 = reg1(inst_rf1, false.B, predict_fail)
     val inst_ex2 = reg1(inst_rf2, false.B, predict_fail)
     val re3_stall = dcache_miss_hazard || sb_full_hazard 
     val re3_flush = predict_fail || !re3_stall && sb_cmt_hazard
-    val inst_ex3 = reg1(inst_rf3, re3_stall, re3_flush)
+        inst_ex3 := reg1(inst_rf3, re3_stall, re3_flush)
 
     val csr_rdata_ex = reg1(csr.io.rdata, mdu.io.busy, predict_fail)
 
@@ -340,7 +356,7 @@ class CPU extends Module {
             prk_data_ex0)) //CSRWR
 
     val inst_ex0_1     = reg1(inst_ex0,       mdu.io.busy, predict_fail)
-    val inst_ex0_2     = reg1(inst_ex0_1,     mdu.io.busy, predict_fail)
+        inst_ex0_2    := reg1(inst_ex0_1,     mdu.io.busy, predict_fail)
     val csr_rdata_ex_1 = reg1(csr_rdata_ex,   mdu.io.busy, predict_fail)
     val csr_rdata_ex_2 = reg1(csr_rdata_ex_1, mdu.io.busy, predict_fail)
     val csr_wdata_ex_1 = reg1(csr_wdata_ex,   mdu.io.busy, predict_fail)
