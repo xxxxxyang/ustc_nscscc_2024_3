@@ -82,8 +82,8 @@ class CPU extends Module {
     val bypass = Module(new Bypass)
 
     //global signals
-    val predict_fail  = Wire(Bool())
-    val branch_target = Wire(UInt(32.W))
+    val predict_fail  = rob.io.predict_fail_cmt
+    val branch_target = rob.io.branch_target_cmt
     val iq_full       = Wire(Bool())
     val dcache_miss_hazard = Wire(Bool())
     val sb_full_hazard     = Wire(Bool())
@@ -202,6 +202,7 @@ class CPU extends Module {
     rob.io.dp := VecInit.tabulate(2)(i =>  {
         val item = Wire(new DP_to_ROB)
         val inst = insts_RN(i)
+        item.inst       := inst.inst
         item.exception  := inst.exception
         item.rd         := inst.rd
         item.rd_valid   := inst.rd_valid
@@ -529,6 +530,18 @@ class CPU extends Module {
     arat.io.br_type        := rob.io.pred.br_type
     arat.io.pc_cmt         := rob.io.pred.pc_cmt
     arat.io.real_jump      := rob.io.pred.real_jump
+    
+    csr.io.wdata      := rob.io.csr_wdata_cmt
+    csr.io.waddr      := rob.io.csr_addr_cmt
+    csr.io.we         := rob.io.csr_we_cmt
+    csr.io.exception  := rob.io.exception_cmt
+    csr.io.badv_exp   := rob.io.badv_cmt
+    csr.io.is_ertn    := rob.io.is_ertn_cmt
+    csr.io.pc_exp     := rob.io.pred.pc_cmt
+    csr.io.interrupt  := 0.U
+    csr.io.ip_int     := false.B
+    csr.io.llbit_clear:= rob.io.llbit_clear_cmt
+    csr.io.llbit_set  := rob.io.llbit_set_cmt
 
     // arbiter
     arb.io.i_araddr                 := icache.io.i_araddr

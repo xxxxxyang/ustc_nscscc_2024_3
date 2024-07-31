@@ -258,6 +258,7 @@ class CSR(timer_width: Int) extends Module{
         time_int := true.B
     }
 
+    io.rdata := 0.U
     switch(io.raddr){
         is(CSR_CRMD)        { io.rdata := crmd }
         is(CSR_PRMD)        { io.rdata := prmd }
