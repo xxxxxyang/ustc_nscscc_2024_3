@@ -51,7 +51,6 @@ class ROB() extends Module{
         val rob_index       = Output(Vec(2, UInt(ROB_W.W)))
         val wb              = Input(Vec(4, new WB_to_ROB))
         val arat            = Output(Vec(2, new ROB_to_ARAT))
-        val predict_fail    = Input(Bool())
         val full            = Output(Bool())
         val stall           = Input(Bool())
         // priv
