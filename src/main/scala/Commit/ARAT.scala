@@ -16,8 +16,10 @@ class ARAT() extends Module{
         val br_type        = Input(UInt(2.W))
         val pc_cmt         = Input(UInt(32.W))
         val pred_update_en = Input(Bool())
+        val real_jump      = Input(Bool())
         val top            = Output(UInt(3.W))
         val ras            = Output(Vec(8, UInt(32.W)))
+        val ghr            = Output(UInt(GHR_WIDTH.W))
     })
     val arat = RegInit(VecInit.fill(PREG_SIZE)(false.B))
     val head = RegInit(0.U(PREG_W.W))
@@ -44,4 +46,10 @@ class ARAT() extends Module{
     }
     io.top := top
     io.ras := ras
+    //ghr
+    val ghr = RegInit(0.U(GHR_WIDTH.W))
+    when(io.pred_update_en){
+        ghr := ghr(GHR_WIDTH - 2, 0) ## io.real_jump
+    }
+    io.ghr := ghr
 } 

@@ -115,7 +115,7 @@ class CPU extends Module {
     predict.io.top_arch     := arat.io.top
     predict.io.ras_arch     := arat.io.ras
     predict.io.predict_fail := predict_fail
-    //todo: ghr_arch
+    predict.io.ghr_arch     := arat.io.ghr
 
     val insts_PF = VecInit.tabulate(2)(i => {
         val inst = Wire(new pack_PF)
@@ -525,6 +525,7 @@ class CPU extends Module {
     arat.io.pred_update_en := rob.io.pred.update_en
     arat.io.br_type        := rob.io.pred.br_type
     arat.io.pc_cmt         := rob.io.pred.pc_cmt
+    arat.io.real_jump      := rob.io.pred.real_jump
 
     // arbiter
     arb.io.i_araddr                 := icache.io.i_araddr
