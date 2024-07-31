@@ -70,7 +70,7 @@ class Arbiter_IO extends Bundle {
     val wvalid          = Output(Bool())
 }
 
-class Arbiter extends Module{
+class Arbiter_AXI extends Module{
     val io = IO(new Arbiter_IO)
 
     // default signals
