@@ -16,6 +16,7 @@ object Interfaces {
         val is_store    = Bool()
         val is_br       = Bool()
         val br_type     = UInt(2.W)              // 用于分支预测
+        val br_cnt      = UInt(2.W)
         val priv_vec    = UInt(13.W)
         val inst        = UInt(32.W)             // debug
     }

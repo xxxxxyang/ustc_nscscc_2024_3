@@ -24,6 +24,7 @@ class ROB_Item() extends Bundle{
     val predict_fail  = Bool()
     val real_jump     = Bool()
     val branch_target = UInt(32.W)
+    val br_cnt        = UInt(2.W)
     val rf_wdata      = UInt(32.W)             // debug
     val complete      = Bool()
 }
@@ -79,6 +80,7 @@ class ROB() extends Module{
             val pc_cmt        = Output(UInt(32.W))
             val real_jump     = Output(Bool())
             val br_type       = Output(UInt(2.W))
+            val br_cnt        = Output(UInt(2.W))
         })
         // 更新 store buffer
         val store_num_cmt     = Output(UInt(2.W))
@@ -92,6 +94,8 @@ class ROB() extends Module{
         val idle_en_cmt       = Output(Bool())
         val llbit_set_cmt     = Output(Bool())
         val llbit_clear_cmt   = Output(Bool())
+        
+        val rob_index_cmt     = Output(UInt(PREG_W.W))
     })
 
     //rob表 2*(ROB_SIZE/2)
@@ -118,6 +122,7 @@ class ROB() extends Module{
             rob(i)(tail).is_store    := io.dp(i).is_store
             rob(i)(tail).is_br       := io.dp(i).is_br
             rob(i)(tail).br_type     := io.dp(i).br_type
+            rob(i)(tail).br_cnt      := io.dp(i).br_cnt
             rob(i)(tail).is_priv_wrt := io.dp(i).priv_vec(9, 1).orR
             rob(i)(tail).is_priv_ls  := io.dp(i).priv_vec(12, 10).orR
             rob(i)(tail).inst        := io.dp(i).inst
@@ -218,6 +223,7 @@ class ROB() extends Module{
     io.pred.pc_cmt          := reg1(update_item.pc)
     io.pred.real_jump       := reg1(update_item.real_jump)
     io.pred.br_type         := reg1(update_item.br_type)
+    io.pred.br_cnt          := reg1(update_item.br_cnt)
 
     // 更新store buffer
     val store_num_cmt = PopCount(VecInit.tabulate(2)(i => 
@@ -235,4 +241,6 @@ class ROB() extends Module{
     io.idle_en_cmt   := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(9))
     io.llbit_set_cmt   := reg1(update_item.is_priv_ls && priv_ls_buf.priv_vec(1))
     io.llbit_clear_cmt := reg1(update_item.is_priv_ls && priv_ls_buf.priv_vec(2))
+
+    io.rob_index_cmt := reg1(head)
 } 

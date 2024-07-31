@@ -64,6 +64,7 @@ class CPU extends Module {
     val iq3 = Module(new IssueQueue(IQ_SIZE(3), true))
     // RF
     val rf = Module(new RegFile)
+    val csr = Module(new CSR(30))
     // EX
     val mdu = Module(new MDU)
 
@@ -74,7 +75,7 @@ class CPU extends Module {
     val br   = Module(new Branch)
 
     val dcache = Module(new Dcache)
-    val sb = Module(new SB(4))
+    val sb = Module(new SB(SB_NUM))
     // WB
     val rob    = Module(new ROB)
     val arat   = Module(new ARAT)
@@ -105,6 +106,16 @@ class CPU extends Module {
     predict.io.pd_fix_en    := pd.io.pd_fix_en
     predict.io.pd_fix_is_bl := pd.io.pd_fix_is_bl
     predict.io.pd_fix_pc    := pd.io.pd_fix_pc
+    predict.io.update_en     := rob.io.pred.update_en
+    predict.io.branch_target := rob.io.pred.branch_target
+    predict.io.pc_cmt        := rob.io.pred.pc_cmt
+    predict.io.real_jump     := rob.io.pred.real_jump
+    predict.io.br_type       := rob.io.pred.br_type
+    predict.io.cmt_br_cnt    := rob.io.pred.br_cnt
+    predict.io.top_arch     := arat.io.top
+    predict.io.ras_arch     := arat.io.ras
+    predict.io.predict_fail := predict_fail
+    //todo: ghr_arch
 
     val insts_PF = VecInit.tabulate(2)(i => {
         val inst = Wire(new pack_PF)
@@ -173,7 +184,13 @@ class CPU extends Module {
     rename.io.predict_fail   := reg1(predict_fail)
     rename.io.arch_rat_valid := arat.io.arat
     rename.io.alloc_preg     := alloc_preg_RN
-    //todo: wake
+
+    val inst_ex0_2 = Wire(new pack_DP)
+    val inst_rf3   = Wire(new pack_DP)
+    val inst_ex3   = Wire(new pack_DP)
+
+    rename.io.wake_preg  := VecInit(inst_ex0_2.prd, iq1.io.to_wake, iq2.io.to_wake, inst_ex3.prd)
+    rename.io.wake_valid := VecInit(!mdu.io.busy, iq1.io.issue_valid, iq2.io.issue_valid, !dcache_miss_hazard)
     
     val insts_RN = VecInit.tabulate(2)(i =>
         pack_RN(insts_ID_RN(i), rename.io.prj(i), rename.io.prk(i), rename.io.prd(i), rename.io.pprd(i)))
@@ -203,6 +220,7 @@ class CPU extends Module {
             }
             typ
         }
+        item.br_cnt     := inst.br_cnt
         item.priv_vec   := inst.priv_vec
         item.inst
     })
@@ -246,7 +264,7 @@ class CPU extends Module {
 
     dcache_miss_hazard  := dcache.io.cache_miss
     sb_full_hazard      := sb.io.full && inst_ex3.mem_type(2)
-    sb_cmt_hazard       := sb.io.wb_valid && inst_rf3.mem_type(5)
+    sb_cmt_hazard       := sb.io.wb_valid && inst_rf3.mem_type(4)
     val ir3_stall        = dcache_miss_hazard || sb_full_hazard || sb_cmt_hazard
     iq3.io.insts        := insts_DP
     iq3.io.insts_valid  := dp.io.inst_valid(3)
@@ -258,8 +276,8 @@ class CPU extends Module {
     val inst_iq3 = iq3.io.issue_inst
     inst_iq3.inst_valid := iq3.io.issue_valid
 
-    val iq_self_wake_preg = VecInit(Mux(!mdu.io.busy, md_ex2_ex3_reg.io.inst_pack_EX2.prd, 0.U),sel1.io.wake_preg, sel2.io.wake_preg, re_reg3.io.inst_pack_EX.prd)
-    val iq_mutual_wake_preg = VecInit(Mux(!mdu.io.busy, md_ex2_ex3_reg.io.inst_pack_EX2.prd, 0.U),ir_reg1.io.inst_pack_RF.prd,ir_reg2.io.inst_pack_RF.prd,Mux(!dcache.io.cache_miss_MEM(4), re_reg3.io.inst_pack_EX.prd, 0.U))
+    val iq_self_wake_preg = VecInit(Mux(!mdu.io.busy, inst_ex0_2.prd, 0.U), iq1.io.to_wake, iq2.io.to_wake, inst_ex3.prd)
+    val iq_mutual_wake_preg = VecInit(Mux(!mdu.io.busy, inst_ex0_2.prd, 0.U), inst_rf1.prd, inst_rf2.prd, Mux(!dcache_miss_hazard, inst_ex3.prd, 0.U))
 
     iq0.io.wake_preg := VecInit(iq_self_wake_preg(0),iq_mutual_wake_preg(1),iq_mutual_wake_preg(2),iq_mutual_wake_preg(3))
     iq1.io.wake_preg := VecInit(iq_mutual_wake_preg(0),iq_self_wake_preg(1),iq_self_wake_preg(2),iq_mutual_wake_preg(3))
@@ -271,8 +289,8 @@ class CPU extends Module {
     val inst_rf0 = reg1(inst_iq0, ir0_stall, predict_fail)
     val inst_rf1 = reg1(inst_iq1, false.B,   predict_fail)
     val inst_rf2 = reg1(inst_iq2, false.B,   predict_fail)
-    val inst_rf3 = reg1(inst_iq3, ir3_stall, predict_fail)
-    val imm_rf3 = reg1(Mux(inst_iq3.priv_vec(10), Fill(5, inst_iq3.imm(31)) ## inst_iq3.inst_pack_RF.imm(31, 5), inst_iq3.inst_pack_RF.imm), ir3_stall, predict_fail)
+        inst_rf3:= reg1(inst_iq3, ir3_stall, predict_fail)
+    val imm_rf3 = reg1(Mux(inst_iq3.priv_vec(10), Fill(5, inst_iq3.imm(31)) ## inst_iq3.imm(31, 5), inst_iq3.imm), ir3_stall, predict_fail)
     val prj_data_rf3 = reg_fw(rf.io.prj_data(3),
         bypass.io.forward_prj_en(3), bypass.io.forward_prj_data(3),
         ir3_stall, predict_fail)
@@ -283,15 +301,18 @@ class CPU extends Module {
     // regfile read -------------------------
     rf.io.prj := VecInit(inst_rf0.prj, inst_rf1.prj, inst_rf2.prj, inst_iq3.prj)
     rf.io.prk := VecInit(inst_rf0.prk, inst_rf1.prk, inst_rf2.prk, inst_iq3.prk)
-    //todo: CSR read for MD pipeline (0)
-    //todo: RF stage for LS pipeline (3)
+    
+    csr.io.raddr := inst_rf0.imm(13, 0)
+
     // RF-EX
     val inst_ex0 = reg1(inst_rf0, mdu.io.busy, predict_fail)
     val inst_ex1 = reg1(inst_rf1, false.B, predict_fail)
     val inst_ex2 = reg1(inst_rf2, false.B, predict_fail)
     val re3_stall = dcache_miss_hazard || sb_full_hazard 
     val re3_flush = predict_fail || !re3_stall && sb_cmt_hazard
-    val inst_ex3 = reg1(inst_rf3, re3_stall, re3_flush)
+        inst_ex3 := reg1(inst_rf3, re3_stall, re3_flush)
+
+    val csr_rdata_ex = reg1(csr.io.rdata, mdu.io.busy, predict_fail)
 
     val prj_data_ex0 = reg_fw(rf.io.prj_data(0),
         bypass.io.forward_prj_en(0), bypass.io.forward_prj_data(0),
@@ -316,9 +337,55 @@ class CPU extends Module {
 
     // val prj_data_ex3 = 
     // execute -------------------------
-    // alu1.io.alu_op := 
-    //LS execute
+    //0
+    mdu.io.op := inst_ex0.alu_op
+    mdu.io.src1 := prj_data_ex0
+    mdu.io.src2 := prk_data_ex0
 
+    rob.io.ex.priv_vec      := inst_ex0.priv_vec(9, 0)
+    rob.io.ex.csr_addr      := inst_ex0.imm(13, 0)
+    rob.io.ex.tlb_entry     := 0.U // todo: MMU
+    rob.io.ex.invtlb_op     := inst_ex0.imm(4, 0)
+    rob.io.ex.invtlb_asid   := prj_data_ex0(9, 0)
+    rob.io.ex.invtlb_vaddr  := prk_data_ex0
+    
+    //todo: tlbsrch
+    val csr_wdata_ex = Mux(inst_ex0.priv_vec(3), csr_rdata_ex, //ERTN
+        Mux(inst_ex0.priv_vec(2), 
+            prj_data_ex0 & prk_data_ex0 | ~prj_data_ex0 & csr_rdata_ex, //CSRXCHG
+            prk_data_ex0)) //CSRWR
+
+    val inst_ex0_1     = reg1(inst_ex0,       mdu.io.busy, predict_fail)
+        inst_ex0_2    := reg1(inst_ex0_1,     mdu.io.busy, predict_fail)
+    val csr_rdata_ex_1 = reg1(csr_rdata_ex,   mdu.io.busy, predict_fail)
+    val csr_rdata_ex_2 = reg1(csr_rdata_ex_1, mdu.io.busy, predict_fail)
+    val csr_wdata_ex_1 = reg1(csr_wdata_ex,   mdu.io.busy, predict_fail)
+    val csr_wdata_ex_2 = reg1(csr_wdata_ex_1, mdu.io.busy, predict_fail)
+    
+    //1
+    alu1.io.alu_op := inst_ex1.alu_op
+    alu1.io.src1 := Mux(inst_ex1.alu_rs1_sel === RS1_PC, inst_ex1.pc, prj_data_ex1)
+    alu1.io.src2 := MuxLookup(inst_ex1.alu_rs2_sel, 0.U)(Seq(
+        RS2_REG  -> prk_data_ex1,
+        RS2_IMM  -> inst_ex1.imm,
+        RS2_CNTH -> cnt.io.cnt(63, 32),
+        RS2_CNTL -> cnt.io.cnt(31, 0)))
+    
+    //2
+    alu2.io.alu_op := inst_ex2.alu_op
+    alu2.io.src1 := Mux(inst_ex2.alu_rs1_sel === RS1_PC, inst_ex2.pc, prj_data_ex2)
+    alu2.io.src2 := MuxLookup(inst_ex2.alu_rs2_sel, 0.U)(Seq(
+        RS2_REG  -> prk_data_ex2,
+        RS2_IMM  -> inst_ex2.imm,
+        RS2_FOUR -> 4.U))
+    br.io.br_type := inst_ex2.br_type
+    br.io.src1 := prj_data_ex2
+    br.io.src2 := prk_data_ex2
+    br.io.pc   := inst_ex2.pc
+    br.io.imm  := inst_ex2.imm
+    br.io.pred_jump := inst_ex2.pred_jump
+    br.io.pred_npc  := inst_ex2.pred_npc
+    //3
     //rob LS
     rob.io.ex.priv_vec_ls := inst_ex3.priv_vec(12,10)
 
@@ -376,14 +443,88 @@ class CPU extends Module {
                                                         9.U -> 0.U(16.W) ## mem_rdata_raw(15, 0)))
     val ls_wb_data = Mux(inst_mem.priv_vec(12), 0.U(31.W) ## llbit_mem, mem_rdata)
 
-    //WB reg
+    // EX-WB
+    val inst_wb0 = reg1(inst_ex0_2, false.B, predict_fail || mdu.io.busy)
+    val inst_wb1 = reg1(inst_ex1, false.B, predict_fail)
+    val inst_wb2 = reg1(inst_ex2, false.B, predict_fail)
     val wb3_stall = false.B
     val wb3_flush = predict_fail || dcache_miss_hazard
-
     val inst_wb3 = reg1(inst_mem, wb3_stall, wb3_flush)
-    val exception_wb3 = reg1(exception_mem, wb3_stall, wb3_flush)
-    val vaddr_wb3 = reg1(prj_data_mem, wb3_stall, wb3_flush)
-    val mem_rdata_wb3 = reg1(ls_wb_data, wb3_stall, wb3_flush)
+    
+    //0
+    val csr_wdata_wb = reg1(csr_wdata_ex_2, false.B, predict_fail || mdu.io.busy)
+    val md_out_wb = reg1(Mux(inst_ex0_2.priv_vec(0), csr_rdata_ex_2, 
+        Mux(inst_ex0_2.alu_op(2), mdu.io.div_res, mdu.io.mul_res)),
+        false.B, predict_fail || mdu.io.busy)
+    //1
+    val alu_out_wb1      = reg1(alu1.io.alu_out,     false.B, predict_fail)
+    //2
+    val alu_out_wb2      = reg1(alu2.io.alu_out,     false.B, predict_fail)
+    val predict_fail_wb  = reg1(br.io.predict_fail,  false.B, predict_fail)
+    val branch_target_wb = reg1(br.io.branch_target, false.B, predict_fail)
+    val branch_en_wb     = reg1(br.io.branch_en,     false.B, predict_fail)
+    //3
+    val exception_wb     = reg1(exception_mem, wb3_stall, wb3_flush)
+    val vaddr_wb         = reg1(prj_data_mem, wb3_stall, wb3_flush)
+    val mem_rdata_wb     = reg1(ls_wb_data, wb3_stall, wb3_flush)
+    // write back -------------------------
+    rf.io.prd   := VecInit(inst_wb0.prd, inst_wb1.prd, inst_wb2.prd, inst_wb3.prd)
+    rf.io.we    := VecInit(inst_wb0.rd_valid, inst_wb1.rd_valid, inst_wb2.rd_valid, inst_wb3.rd_valid && exception_wb(7))
+    rf.io.wdata := VecInit(md_out_wb, alu_out_wb1, alu_out_wb2, mem_rdata_wb)
+
+    bypass.io.prj_ex := VecInit(inst_ex0.prj, inst_ex1.prj, inst_ex2.prj, inst_rf3.prj)
+    bypass.io.prk_ex := VecInit(inst_ex0.prk, inst_ex1.prk, inst_ex2.prk, inst_rf3.prk)
+    bypass.io.prd_wb := rf.io.prd
+    bypass.io.rd_valid_wb := rf.io.we
+    bypass.io.prd_wdata_wb := rf.io.wdata
+
+    rob.io.wb := VecInit(
+        {val wb = Wire(new WB_to_ROB)
+            wb.valid := inst_wb0.rd_valid
+            wb.rob_index := inst_wb0.rob_index
+            wb.exception := DontCare
+            wb.predict_fail := DontCare
+            wb.real_jump := DontCare
+            wb.branch_target := csr_wdata_wb
+            wb.rf_wdata := rf.io.wdata(0)
+        wb},
+        {val wb = Wire(new WB_to_ROB)
+            wb.valid := inst_wb1.rd_valid
+            wb.rob_index := inst_wb1.rob_index
+            wb.exception := DontCare
+            wb.predict_fail := DontCare
+            wb.real_jump := DontCare
+            wb.branch_target := DontCare
+            wb.rf_wdata := rf.io.wdata(1)
+        wb},
+        {val wb = Wire(new WB_to_ROB)
+            wb.valid := inst_wb2.rd_valid
+            wb.rob_index := inst_wb2.rob_index
+            wb.exception := DontCare
+            wb.predict_fail := predict_fail_wb
+            wb.real_jump := branch_en_wb
+            wb.branch_target := branch_target_wb
+            wb.rf_wdata := rf.io.wdata(2)
+        wb},
+        {val wb = Wire(new WB_to_ROB)
+            wb.valid := inst_wb3.rd_valid
+            wb.rob_index := inst_wb3.rob_index
+            wb.exception := exception_wb
+            wb.predict_fail := DontCare
+            wb.real_jump := DontCare
+            wb.branch_target := vaddr_wb
+            wb.rf_wdata := rf.io.wdata(3)
+        wb}
+    )
+    rob.io.tlbrentry := csr.io.tlbrentry_global
+    rob.io.eentry    := csr.io.eentry_global
+    rob.io.llbit     := csr.io.llbit_global
+    
+    // commit ------------------
+    arat.io.rob <> rob.io.arat
+    arat.io.pred_update_en := rob.io.pred.update_en
+    arat.io.br_type        := rob.io.pred.br_type
+    arat.io.pc_cmt         := rob.io.pred.pc_cmt
 
     // arbiter
     arb.io.i_araddr                 := icache.io.i_araddr
@@ -392,19 +533,19 @@ class CPU extends Module {
     arb.io.i_rburst                 := icache.io.i_rburst
     arb.io.i_rlen                   := icache.io.i_rlen
 
-    //arb.io.d_araddr                 := dcache.io.d_araddr
+    arb.io.d_araddr                 := dcache.io.d_raddr
     arb.io.d_rvalid                 := dcache.io.d_rvalid
     arb.io.d_rsize                  := dcache.io.d_rsize
     arb.io.d_rburst                 := dcache.io.d_rburst
     arb.io.d_rlen                   := dcache.io.d_rlen
-    //arb.io.d_awaddr                 := dcache.io.d_awaddr
+    arb.io.d_awaddr                 := dcache.io.d_waddr
     arb.io.d_wvalid                 := dcache.io.d_wvalid
     arb.io.d_wdata                  := dcache.io.d_wdata
     arb.io.d_wlast                  := dcache.io.d_wlast
     arb.io.d_wsize                  := dcache.io.d_wsize
     arb.io.d_wburst                 := dcache.io.d_wburst
     arb.io.d_wlen                   := dcache.io.d_wlen
-    //arb.io.d_wstrb                  := dcache.io.d_wstrb
+    arb.io.d_wstrb                  := dcache.io.d_wmask
     arb.io.d_bready                 := dcache.io.d_bready
 
 
