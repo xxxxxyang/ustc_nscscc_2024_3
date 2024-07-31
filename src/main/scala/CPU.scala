@@ -142,6 +142,9 @@ class CPU extends Module {
     icache.io.cacop_en   := false.B
     icache.io.cacop_op   := 0.U
     icache.io.stall      := fq.io.full
+    icache.io.i_rready   := arb.io.i_rready
+    icache.io.i_rdata    := arb.io.i_rdata
+    icache.io.i_rlast    := arb.io.i_rlast
     val insts_IF = VecInit.tabulate(2)(i =>
         pack_IF(insts_PF_IF(i), icache.io.inst(i)))
 
@@ -344,6 +347,7 @@ class CPU extends Module {
     mdu.io.op := inst_ex0.alu_op
     mdu.io.src1 := prj_data_ex0
     mdu.io.src2 := prk_data_ex0
+    mdu.io.inst_valid := inst_ex0.inst_valid
 
     rob.io.ex.priv_vec      := inst_ex0.priv_vec(9, 0)
     rob.io.ex.csr_addr      := inst_ex0.imm(13, 0)
