@@ -95,6 +95,12 @@ class ROB() extends Module{
         val llbit_clear_cmt   = Output(Bool())
         
         val rob_index_cmt     = Output(UInt(PREG_W.W))
+
+        //debug
+        val rd_cmt            = Output(Vec(2, UInt(5.W)))
+        val rf_wdata_cmt      = Output(Vec(2, UInt(32.W)))
+        val pc_cmt            = Output(Vec(2, UInt(32.W)))
+        val inst_cmt          = Output(Vec(2, UInt(32.W)))
     })
 
     //rob表 2*(ROB_SIZE/2)
@@ -242,4 +248,9 @@ class ROB() extends Module{
     io.llbit_clear_cmt := reg1(update_item.is_priv_ls && priv_ls_buf.priv_vec(2))
 
     io.rob_index_cmt := reg1(head)
+
+    io.rd_cmt       := reg1(VecInit(commit_item.map(_.rd)))
+    io.rf_wdata_cmt := reg1(VecInit(commit_item.map(_.rf_wdata)))
+    io.pc_cmt       := reg1(VecInit(commit_item.map(_.pc)))
+    io.inst_cmt     := reg1(VecInit(commit_item.map(_.inst)))
 } 
