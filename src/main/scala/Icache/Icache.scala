@@ -161,9 +161,9 @@ class Icache extends Module{
 
     /* hit */
     val cache_hit               = WireDefault(false.B)                                  // cache命中
-    val cache_hit_oh            = VecInit.tabulate(2)(i => valid_IF(i) && tag_IF(i) === tag_RM)             // cache line向量的独热码
-    val cache_hit_line          = OHToUInt(cache_hit_oh)                                // 命中的cache line序号（cmem[0]或cmem[1]），若未命中则为0
-    cache_hit                   := cache_hit_line.orR
+    val cache_hit_oh            = VecInit.tabulate(2){i => valid_IF(i) && (tag_IF(i) === tag_RM)}             // cache line向量的独热码
+    cache_hit                   := cache_hit_oh.asUInt.orR
+    val cache_hit_line          = Mux(cache_hit, OHToUInt(cache_hit_oh), 0.U)
     cache_miss_RM               := !cache_hit
 
     // cacop

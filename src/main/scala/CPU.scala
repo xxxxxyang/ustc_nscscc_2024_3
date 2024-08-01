@@ -44,6 +44,14 @@ class CPU extends Module {
         val wvalid  = Output(Bool())
 
         val diff_csr = Output(new CSR_REG)
+
+        val commit_en                   = Output(Vec(2, Bool()))
+        val commit_rd                   = Output(Vec(2, UInt(5.W)))
+        val commit_prd                  = Output(Vec(2, UInt(PREG_W.W)))
+        val commit_rd_valid             = Output(Vec(2, Bool()))
+        val commit_rf_wdata             = Output(Vec(2, UInt(32.W)))
+        val commit_pc                   = Output(Vec(2, UInt(32.W)))
+        val commit_inst                 = Output(Vec(2, UInt(32.W)))
     })
     val arb = Module(new Arbiter_AXI)
     // PF 
@@ -608,4 +616,12 @@ class CPU extends Module {
     io.wvalid                       := arb.io.wvalid
 
     io.diff_csr                     := csr.io.csr_reg
+    
+    io.commit_en                    := rob.io.arat.map(_.commit_en)
+    io.commit_pc                    := rob.io.pc_cmt
+    io.commit_inst                  := rob.io.inst_cmt
+    io.commit_rd                    := rob.io.rd_cmt
+    io.commit_prd                   := rob.io.arat.map(_.prd)
+    io.commit_rd_valid              := rob.io.arat.map(_.rd_valid)
+    io.commit_rf_wdata              := rob.io.rf_wdata_cmt
 }
