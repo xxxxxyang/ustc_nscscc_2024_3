@@ -164,7 +164,7 @@ class Icache extends Module{
     val cache_hit_oh            = VecInit.tabulate(2){i => valid_IF(i) && (tag_IF(i) === tag_RM)}             // cache line向量的独热码
     cache_hit                   := cache_hit_oh.asUInt.orR
     val cache_hit_line          = Mux(cache_hit, OHToUInt(cache_hit_oh), 0.U)
-    cache_miss_RM               := !cache_hit
+    //cache_miss_RM               := !cache_hit
 
     // cacop
     val cacop_way_RM    = Mux(cacop_op_RM(1), cache_hit_line, paddr_RM(0))              // 地址直接索引或查询索引路选择
@@ -211,25 +211,30 @@ class Icache extends Module{
                 state               := Mux(cacop_exec_RM, s_refill, s_idle)         // 当为cacop操作时，根据cacop_exec_RM选择s_refill或s_idle
                 addr_sel            := Mux(cacop_exec_RM, FROM_SEG, FROM_PIPE)
                 cache_miss_RM       := cacop_exec_RM
+                inst_valid          := !cacop_exec_RM
             }.elsewhen(rvalid_RM){
                 when(uncache_RM){
                     state           := s_miss                                       // 当CPU准备读取数据且非缓存状态(强序非缓存地址)时，进入miss状态
                     cache_miss_RM   := true.B                                       // 缓存未命中
                     addr_sel        := FROM_SEG
+                    inst_valid      := false.B
                 }.otherwise{
                     state           := Mux(cache_miss_RM, s_miss, s_idle)
                     data_sel        := FROM_CMEM
                     addr_sel        := FROM_PIPE
                     lru_hit_upd     := cache_hit
                     inst_valid      := cache_hit
+                    cache_miss_RM   := !cache_hit
                 }
             }
         }
         is(s_miss){
             i_rvalid            := !read_finish
+            cache_miss_RM       := true.B
             state               := Mux(read_finish, Mux(uncache_RM, s_wait, s_refill), s_miss)
         }
         is(s_refill){
+            cache_miss_RM       := true.B
             addr_sel            := FROM_SEG
             lru_miss_upd        := !cacop_en_RM
             state               := s_wait
@@ -240,6 +245,7 @@ class Icache extends Module{
             state               := Mux(stall, s_idle, s_wait)
             data_sel            := FROM_RBUF
             inst_valid          := true.B
+            cache_miss_RM       := false.B
         }
     }
 
