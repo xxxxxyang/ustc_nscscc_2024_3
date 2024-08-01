@@ -145,7 +145,7 @@ class CPU extends Module {
         fq.io.full || icache_waiting, //pi stall
         predict_fail || !fq.io.full && pd.io.pd_fix_en) //pi flush
     // instruction fetch ------------------------
-    icache.io.rvalid_IF  := true.B
+    icache.io.rvalid_IF  := !reset.asBool
     icache.io.addr_IF    := pc.io.pc
     icache.io.paddr_IF   := pc.io.pc // todo: mmu
     icache.io.exception  := 0.U
