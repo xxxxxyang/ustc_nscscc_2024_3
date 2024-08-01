@@ -136,3 +136,37 @@ class TLB_Entry extends Bundle{
     val d1   = Bool()
     val v1   = Bool()
 }
+
+object CSR_REG {
+    class CSR_REG extends Bundle {
+    val crmd        = UInt(32.W)
+    val prmd        = UInt(32.W)
+    val estat       = UInt(32.W)
+    val euen        = UInt(32.W)
+    val ecfg        = UInt(32.W)
+    val era         = UInt(32.W)
+    val badv        = UInt(32.W)
+    val eentry      = UInt(32.W)
+    val cpuid       = UInt(32.W)
+    val save0       = UInt(32.W)
+    val save1       = UInt(32.W)
+    val save2       = UInt(32.W)
+    val save3       = UInt(32.W)
+    val llbctl      = UInt(32.W)
+    val tlbidx      = UInt(32.W)
+    val tlbehi      = UInt(32.W)
+    val tlbelo0     = UInt(32.W)
+    val tlbelo1     = UInt(32.W)
+    val asid        = UInt(32.W)
+    val pgdl        = UInt(32.W)
+    val pgdh        = UInt(32.W)
+    val pgd         = UInt(32.W)
+    val tlbrentry   = UInt(32.W)
+    val dmw0        = UInt(32.W)
+    val dmw1        = UInt(32.W)
+    val tid         = UInt(32.W)
+    val tcfg        = UInt(32.W)
+    val tval        = UInt(32.W)
+    val ticlr       = UInt(32.W)
+}
+}

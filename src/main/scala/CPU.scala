@@ -5,6 +5,7 @@ import Interfaces._
 import InstPacks._
 import Util._
 import control_signal._
+import CSR_REG._
 
 class CPU extends Module {
     val io = IO(new Bundle{
@@ -41,6 +42,8 @@ class CPU extends Module {
         val wready  = Input(Bool())
         val wstrb   = Output(UInt(4.W))
         val wvalid  = Output(Bool())
+
+        val diff_csr = Output(new CSR_REG)
     })
     val arb = Module(new Arbiter_AXI)
     // PF 
@@ -603,4 +606,6 @@ class CPU extends Module {
     arb.io.wready                   := io.wready
     io.wstrb                        := arb.io.wstrb
     io.wvalid                       := arb.io.wvalid
+
+    io.diff_csr                     := csr.io.csr_reg
 }
