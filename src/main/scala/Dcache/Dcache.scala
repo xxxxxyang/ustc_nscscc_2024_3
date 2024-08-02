@@ -194,6 +194,7 @@ class Dcache extends Module{
     val hit_index_MEM           = OHToUInt(hit_oh)
     val cache_hit_MEM           = hit_MEM.orR
     val cache_miss_MEM          = WireDefault(!hit_MEM.orR)
+    cache_miss_stall            := cache_miss_MEM
 
     /* cacop logic */
     val cacop_way_MEM   = Mux(cacop_op_MEM(1), hit_index_MEM(1), addr_MEM(0))
