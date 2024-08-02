@@ -33,7 +33,7 @@ class FetchQueue() extends Module{
         when(in_count === 1.U){
             cur := cur ^ 1.U
             for(i <- 0 until FQ_SIZE){
-                when(tail === i.U){
+                when(tail(i)){
                     queue(cur)(i) := to_insert(0)
                 }
             }
@@ -45,8 +45,8 @@ class FetchQueue() extends Module{
                 when(tail === i.U){
                     queue(cur)(i) := to_insert(0)
                 }
-                when(Mux(cur.asBool, shift1(tail), tail) === i.U){
-                    queue(cur)(i) := to_insert(1)
+                when(Mux(cur.asBool, shift1(tail), tail)(i)){
+                    queue(~cur)(i) := to_insert(1)
                 }
             }
             tail := shift1(tail)
