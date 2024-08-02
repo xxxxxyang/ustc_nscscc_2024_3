@@ -42,7 +42,7 @@ class FetchQueue() extends Module{
             }
         }.elsewhen(in_count === 2.U){
             for(i <- 0 until FQ_SIZE){
-                when(tail === i.U){
+                when(tail(i)){
                     queue(cur)(i) := to_insert(0)
                 }
                 when(Mux(cur.asBool, shift1(tail), tail)(i)){
