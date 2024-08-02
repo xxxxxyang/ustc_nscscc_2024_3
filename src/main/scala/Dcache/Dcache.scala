@@ -81,13 +81,24 @@ class Dcache extends Module{
     val cacop_en_reg_EX_TC      = RegInit(false.B)
     val cacop_op_reg_EX_TC      = RegInit(0.U(2.W))
     val flush_reg_EX_TC         = RegInit(false.B)
-    addr_reg_EX_TC              := ShiftRegister(io.addr_EX, 1, EX_TC_en)
-    mem_type_reg_EX_TC          := ShiftRegister(io.mem_type_EX, 1, EX_TC_en)
-    wdata_reg_EX_TC             := ShiftRegister(io.wdata_EX, 1, EX_TC_en)
-    store_cmt_reg_EX_TC         := ShiftRegister(io.store_cmt_EX, 1, EX_TC_en)
-    cacop_en_reg_EX_TC          := ShiftRegister(io.cacop_en, 1, EX_TC_en)
-    cacop_op_reg_EX_TC          := ShiftRegister(io.cacop_op, 1, EX_TC_en)
-    flush_reg_EX_TC             := ShiftRegister(flush, 1, EX_TC_en || flush)
+    when(EX_TC_en){
+        addr_reg_EX_TC          := io.addr_EX
+        mem_type_reg_EX_TC      := io.mem_type_EX
+        wdata_reg_EX_TC         := io.wdata_EX
+        store_cmt_reg_EX_TC     := io.store_cmt_EX
+        cacop_en_reg_EX_TC      := io.cacop_en
+        cacop_op_reg_EX_TC      := io.cacop_op
+    }
+    when(EX_TC_en || flush){
+        flush_reg_EX_TC         := flush
+    }
+    // addr_reg_EX_TC              := ShiftRegister(io.addr_EX, 1, EX_TC_en, init = 0.U(32.W))
+    // mem_type_reg_EX_TC          := ShiftRegister(io.mem_type_EX, 1, EX_TC_en)
+    // wdata_reg_EX_TC             := ShiftRegister(io.wdata_EX, 1, EX_TC_en)
+    // store_cmt_reg_EX_TC         := ShiftRegister(io.store_cmt_EX, 1, EX_TC_en)
+    // cacop_en_reg_EX_TC          := ShiftRegister(io.cacop_en, 1, EX_TC_en)
+    // cacop_op_reg_EX_TC          := ShiftRegister(io.cacop_op, 1, EX_TC_en)
+    // flush_reg_EX_TC             := ShiftRegister(flush, 1, EX_TC_en || flush)
 
 
     // TC stage
@@ -159,21 +170,38 @@ class Dcache extends Module{
     val cacop_op_reg_TC_MEM      = RegInit(0.U(2.W))
     val flush_reg_TC_MEM         = RegInit(false.B)
     val cmem_rdata_reg_TC_MEM    = RegInit(VecInit(Seq.fill(2)(0.U((8*OFFSET_DEPTH).W))))
-    paddr_reg_TC_MEM             := ShiftRegister(Mux(store_cmt_TC || flush_TC, addr_TC, paddr_TC), 1, TC_MEM_en)
-    mem_type_reg_TC_MEM          := ShiftRegister(Mux(mem_type_TC(2) || uncache_TC || store_cmt_TC, mem_type_TC, 0.U), 1, TC_MEM_en)
-    wdata_reg_TC_MEM             := ShiftRegister(wdata_TC, 1, TC_MEM_en)
-    uncache_reg_TC_MEM           := ShiftRegister(uncache_TC, 1, TC_MEM_en)
-    hit_reg_TC_MEM               := ShiftRegister(hit_TC, 1, TC_MEM_en)
-    tag_r_reg_TC_MEM             := ShiftRegister(tag_r_TC, 1, TC_MEM_en)
-    cacop_en_reg_TC_MEM          := ShiftRegister(cacop_en_TC, 1, TC_MEM_en)
-    cacop_op_reg_TC_MEM          := ShiftRegister(cacop_op_TC, 1, TC_MEM_en)
-    flush_reg_TC_MEM             := ShiftRegister(Mux(flush, flush, flush_TC), 1, TC_MEM_en || flush)
-    cmem_rdata_reg_TC_MEM        := ShiftRegister(cmem_rdata_TC, 1, TC_MEM_en)
+    when(TC_MEM_en){
+        paddr_reg_TC_MEM         := Mux(store_cmt_TC || flush_TC, addr_TC, paddr_TC)
+        mem_type_reg_TC_MEM      := Mux(mem_type_TC(2) || uncache_TC || store_cmt_TC, mem_type_TC, 0.U)
+        wdata_reg_TC_MEM         := wdata_TC
+        uncache_reg_TC_MEM       := uncache_TC
+        hit_reg_TC_MEM           := hit_TC
+        tag_r_reg_TC_MEM         := tag_r_TC
+        cacop_en_reg_TC_MEM      := cacop_en_TC
+        cacop_op_reg_TC_MEM      := cacop_op_TC
+        cmem_rdata_reg_TC_MEM    := cmem_rdata_TC
+    }
+    when(TC_MEM_en || flush){
+        flush_reg_TC_MEM         := Mux(flush, flush, flush_TC)
+    }
+    // paddr_reg_TC_MEM             := ShiftRegister(Mux(store_cmt_TC || flush_TC, addr_TC, paddr_TC), 1, TC_MEM_en)
+    // mem_type_reg_TC_MEM          := ShiftRegister(Mux(mem_type_TC(2) || uncache_TC || store_cmt_TC, mem_type_TC, 0.U), 1, TC_MEM_en)
+    // wdata_reg_TC_MEM             := ShiftRegister(wdata_TC, 1, TC_MEM_en)
+    // uncache_reg_TC_MEM           := ShiftRegister(uncache_TC, 1, TC_MEM_en)
+    // hit_reg_TC_MEM               := ShiftRegister(hit_TC, 1, TC_MEM_en)
+    // tag_r_reg_TC_MEM             := ShiftRegister(tag_r_TC, 1, TC_MEM_en)
+    // cacop_en_reg_TC_MEM          := ShiftRegister(cacop_en_TC, 1, TC_MEM_en)
+    // cacop_op_reg_TC_MEM          := ShiftRegister(cacop_op_TC, 1, TC_MEM_en)
+    // flush_reg_TC_MEM             := ShiftRegister(Mux(flush, flush, flush_TC), 1, TC_MEM_en || flush)
+    // cmem_rdata_reg_TC_MEM        := ShiftRegister(cmem_rdata_TC, 1, TC_MEM_en)
 
     val exception_reg_TC_MEM      = RegInit(false.B)
     val rob_index_reg_TC_MEM      = RegInit(0.U(log2Ceil(ROB_NUM).W))
-    exception_reg_TC_MEM          := ShiftRegister(io.exception, 1, true.B)
-    rob_index_reg_TC_MEM          := ShiftRegister(io.rob_index_TC, 1, TC_MEM_en)
+    when(TC_MEM_en){
+        rob_index_reg_TC_MEM      := io.rob_index_TC
+    }
+    exception_reg_TC_MEM          := io.exception
+    // rob_index_reg_TC_MEM          := ShiftRegister(io.rob_index_TC, 1, TC_MEM_en)
 
     // MEM stage
     val addr_MEM                = paddr_reg_TC_MEM
@@ -193,7 +221,7 @@ class Dcache extends Module{
     val hit_oh                  = UIntToOH(hit_MEM)
     val hit_index_MEM           = OHToUInt(hit_oh)
     val cache_hit_MEM           = hit_MEM.orR
-    val cache_miss_MEM          = WireDefault(!hit_MEM.orR)
+    val cache_miss_MEM          = WireDefault(false.B)
     cache_miss_stall            := cache_miss_MEM
 
     /* cacop logic */
