@@ -234,7 +234,7 @@ class Icache extends Module{
             state               := Mux(read_finish, Mux(uncache_RM, s_wait, s_refill), s_miss)
         }
         is(s_refill){
-            cacje_miss_RM       := true.B
+            cache_miss_RM       := true.B
             addr_sel            := FROM_SEG
             lru_miss_upd        := !cacop_en_RM
             state               := s_wait
