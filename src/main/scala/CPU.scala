@@ -109,8 +109,8 @@ class CPU extends Module {
     pc.io.branch_target := branch_target
     pc.io.pd_fix_en     := pd.io.pd_fix_en
     pc.io.pd_fix_target := pd.io.pd_fix_target
-    pc.io.idle_start    := false.B 
-    pc.io.idle_intr     := false.B
+    pc.io.idle_start    := reset.asBool 
+    pc.io.idle_intr     := reset.asBool
 
     predict.io.pc       := pc.io.pc
     predict.io.npc      := pc.io.npc
@@ -148,10 +148,10 @@ class CPU extends Module {
     icache.io.rvalid_IF  := !reset.asBool
     icache.io.addr_IF    := pc.io.pc
     icache.io.paddr_IF   := pc.io.pc // todo: mmu
-    icache.io.exception  := 0.U
-    icache.io.uncache_IF := false.B
-    icache.io.cacop_en   := false.B
-    icache.io.cacop_op   := 0.U
+    icache.io.exception  := reset.asUInt
+    icache.io.uncache_IF := reset.asBool
+    icache.io.cacop_en   := reset.asBool
+    icache.io.cacop_op   := reset.asUInt
     icache.io.stall      := fq.io.full
     icache.io.i_rready   := arb.io.i_rready
     icache.io.i_rdata    := arb.io.i_rdata
@@ -261,7 +261,7 @@ class CPU extends Module {
     iq1.io.insts_valid  := dp.io.inst_valid(1)
     iq1.io.prj_ready    := rename.io.prj_ready
     iq1.io.prk_ready    := rename.io.prk_ready
-    iq1.io.stall        := false.B
+    iq1.io.stall        := reset.asBool
     iq1.io.stall_in     := iq_full || rob.io.full
     iq1.io.flush        := predict_fail
     val inst_iq1 = WireDefault(iq1.io.issue_inst)
@@ -271,7 +271,7 @@ class CPU extends Module {
     iq2.io.insts_valid  := dp.io.inst_valid(2)
     iq2.io.prj_ready    := rename.io.prj_ready
     iq2.io.prk_ready    := rename.io.prk_ready
-    iq2.io.stall        := false.B
+    iq2.io.stall        := reset.asBool
     iq2.io.stall_in     := iq_full || rob.io.full
     iq2.io.flush        := predict_fail
     val inst_iq2 = WireDefault(iq2.io.issue_inst)
@@ -363,7 +363,7 @@ class CPU extends Module {
 
     rob.io.ex.priv_vec      := inst_ex0.priv_vec(9, 0)
     rob.io.ex.csr_addr      := inst_ex0.imm(13, 0)
-    rob.io.ex.tlb_entry     := 0.U.asTypeOf(new TLB_Entry) // todo: MMU
+    rob.io.ex.tlb_entry     := reset.asUInt.asTypeOf(new TLB_Entry) // todo: MMU
     rob.io.ex.invtlb_op     := inst_ex0.imm(4, 0)
     rob.io.ex.invtlb_asid   := prj_data_ex0(9, 0)
     rob.io.ex.invtlb_vaddr  := prk_data_ex0
@@ -428,7 +428,7 @@ class CPU extends Module {
     sb.io.addr_ex := prj_data_ex3
     sb.io.st_data_ex := prk_data_ex3
     sb.io.mem_type_ex := Mux(re3_stall, 0.U, inst_ex3.mem_type)
-    sb.io.uncache_ex := false.B
+    sb.io.uncache_ex := reset.asBool
     sb.io.st_num := rob.io.store_num_cmt
     sb.io.dcache_miss := dcache_miss_hazard
     sb.io.em_stall := em_stall
@@ -440,7 +440,7 @@ class CPU extends Module {
     dcache.io.store_cmt_EX := sb.io.wb_valid
     dcache.io.cacop_en := Mux(sb.io.wb_valid, false.B, inst_rf3.priv_vec(10) && inst_rf3.imm(2,0) === 1.U)
     dcache.io.cacop_op := inst_rf3.imm(4,3)
-    dcache.io.uncache := false.B
+    dcache.io.uncache := reset.asBool
     dcache.io.rob_index_TC := inst_ex3.rob_index
     dcache.io.paddr_TC := prj_data_ex3
     dcache.io.exception := exception_mem
@@ -450,7 +450,7 @@ class CPU extends Module {
     dcache.io.d_rdata := arb.io.rdata
     dcache.io.d_wready := arb.io.wready
     dcache.io.d_bvalid := arb.io.bvalid
-    dcache.io.stall := false.B
+    dcache.io.stall := reset.asBool
     dcache.io.flush := predict_fail
 
     val mem_rdata_raw = VecInit.tabulate(4)(i => Mux(sb.io.ld_hit(i), sb.io.ld_data_mem(i*8+7, i*8), dcache.io.rdata_MEM(i*8+7, i*8))).asUInt
@@ -553,8 +553,8 @@ class CPU extends Module {
     csr.io.badv_exp   := rob.io.badv_cmt
     csr.io.is_ertn    := rob.io.is_ertn_cmt
     csr.io.pc_exp     := rob.io.pred.pc_cmt
-    csr.io.interrupt  := 0.U
-    csr.io.ip_int     := false.B
+    csr.io.interrupt  := reset.asUInt
+    csr.io.ip_int     := reset.asBool
     csr.io.llbit_clear:= rob.io.llbit_clear_cmt
     csr.io.llbit_set  := rob.io.llbit_set_cmt
 
