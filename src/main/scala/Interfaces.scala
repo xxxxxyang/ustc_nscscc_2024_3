@@ -7,14 +7,18 @@ object Interfaces {
      * 返回rob_index
      */
     class DP_to_ROB() extends Bundle{
-        val exception   = Output(UInt(8.W))              // 前端产生的异常
-        val typ         = Output(UInt(2.W))              // 类型 (store, br, .. )
-        val rd          = Output(UInt(5.W))              // 目的逻辑寄存器 (rd)
-        val rd_valid    = Output(Bool())                 // 是否写
-        val prd         = Output(UInt(PREG_W.W))         // 物理寄存器
-        val pprd        = Output(UInt(PREG_W.W))         // 原物理寄存器
-        val pc          = Output(UInt(32.W))             
-        val rob_index   = Input(UInt(ROB_W.W))
+        val exception   = UInt(8.W)              // 前端产生的异常
+        val rd          = UInt(5.W)              // 目的逻辑寄存器 (rd)
+        val rd_valid    = Bool()                 // 是否写
+        val prd         = UInt(PREG_W.W)         // 物理寄存器
+        val pprd        = UInt(PREG_W.W)         // 原物理寄存器
+        val pc          = UInt(32.W)
+        val is_store    = Bool()
+        val is_br       = Bool()
+        val br_type     = UInt(2.W)              // 用于分支预测
+        val br_cnt      = UInt(2.W)
+        val priv_vec    = UInt(13.W)
+        val inst        = UInt(32.W)             // debug
     }
     /**
      * 在 WB 阶段，
@@ -22,9 +26,13 @@ object Interfaces {
      * (写寄存器和分支失败不进ROB)
      */
     class WB_to_ROB() extends Bundle{
-        val v           = Bool()                 // 有效
-        val rob_index   = UInt(ROB_W.W)
-        val exception   = UInt(8.W)              // 后端产生的异常
+        val valid         = Bool()                 // 有效
+        val rob_index     = UInt(ROB_W.W)
+        val exception     = UInt(8.W)              // 后端产生的异常
+        val predict_fail  = Bool()
+        val real_jump     = Bool()
+        val branch_target = UInt(32.W)
+        val rf_wdata      = UInt(32.W)             // debug
     }
 
     class ROB_to_ARAT() extends Bundle{

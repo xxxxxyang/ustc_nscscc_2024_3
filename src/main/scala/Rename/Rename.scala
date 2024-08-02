@@ -15,10 +15,16 @@ class Rename(n:Int) extends Module {
         val prd = Output(Vec(2,UInt(log2Ceil(n).W)))          //RAT中rd寄存器的物理寄存器编号
         val pprd = Output(Vec(2,UInt(log2Ceil(n).W)))         //RAT中rd寄存器的旧的物理寄存器编号
 
+        val prj_ready = Output(Vec(2,Bool()))       //rj物理寄存器的ready信号
+        val prk_ready = Output(Vec(2,Bool()))       //rk物理寄存器的ready信号
+
         val predict_fail = Input(Bool())             //分支预测错误信号
-        val arch_rat_valid = Input(Vec(32,Bool()))   //ROB维护的architectural RAT中valid位的信息
+        val arch_rat_valid = Input(Vec(n,Bool()))   //ROB维护的architectural RAT中valid位的信息
 
         val rename_en = Input(Vec(2,Bool()))                //重命名使能信号,若开启则会使CRAT锁定
+
+        val wake_preg = Input(Vec(4,UInt(log2Ceil(n).W)))  //唤醒的物理寄存器编号
+        val wake_valid = Input(Vec(4,Bool()))              //唤醒的物理寄存器是否有效
     })
 
     //CRAT表
@@ -46,4 +52,8 @@ class Rename(n:Int) extends Module {
     crat.io.alloc_preg := io.alloc_preg
     crat.io.predict_fail := io.predict_fail
     crat.io.arch_rat_valid := io.arch_rat_valid
+    crat.io.wake_preg := io.wake_preg
+    crat.io.wake_valid := io.wake_valid
+    io.prj_ready := crat.io.prj_ready
+    io.prk_ready := crat.io.prk_ready
 }

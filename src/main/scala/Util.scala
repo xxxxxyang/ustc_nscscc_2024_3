@@ -21,4 +21,24 @@ object Util {
         val n = a.getWidth
         0.U(1.W) ## a(n - 1, 1)
     }
+    def reg1[T <: Data](a: T, stall: Bool = false.B, flush: Bool = false.B): T = {
+        val reg = RegInit(0.U.asTypeOf(a))
+        when(flush){
+            reg := 0.U.asTypeOf(a)
+        }.elsewhen(!stall){
+            reg := a
+        }
+        reg
+    }
+    def reg_fw[T <: Data](a: T, forward_en: Bool, forward_data: T, stall: Bool = false.B, flush: Bool = false.B): T = {
+        val reg = RegInit(0.U.asTypeOf(a))
+        when(flush){
+            reg := 0.U.asTypeOf(a)
+        }.elsewhen(!stall){
+            reg := a
+        }.elsewhen(forward_en){
+            reg := forward_data
+        }
+        Mux(forward_en, forward_data, reg)
+    }
 }

@@ -36,13 +36,13 @@ class PreDecode extends Module {
                     insts_PD(i).pred_npc  := io.insts(i).pc + 4.U
                 }
                 is(j_ALWAYS){ //B, BL
-                    val npc = io.insts(i).pc + (inst(i)(9, 0) ## inst(i)(25, 10) ## 0.U(2.W))
+                    val npc = io.insts(i).pc + (Fill(4, inst(i)(9)) ## inst(i)(9, 0) ## inst(i)(25, 10) ## 0.U(2.W))
                     need_fix(i) := !io.insts(i).pred_jump || io.insts(i).pred_npc =/= npc
                     insts_PD(i).pred_jump := true.B
                     insts_PD(i).pred_npc  := npc
                 }
                 is(j_COND){
-                    val npc = io.insts(i).pc + (inst(i)(25, 10) ## 0.U(2.W))
+                    val npc = io.insts(i).pc + (Fill(14, inst(i)(25)) ## inst(i)(25, 10) ## 0.U(2.W))
                     when(!io.insts(i).pred_valid){
                         val is_back = inst(i)(25)
                         need_fix(i)           := is_back
@@ -55,6 +55,14 @@ class PreDecode extends Module {
     }
     insts_PD(0).inst_valid      := io.insts(0).inst_valid
     insts_PD(1).inst_valid      := io.insts(0).inst_valid && io.insts(1).inst_valid && !need_fix(0)
+    
+    // 前端异常处理
+    for(i <- 0 until 2){
+        when(io.insts(i).exception.orR){
+            insts_PD(i).inst := 0x00100000.U //ADD r0, r0, r0
+        }
+    }
+
     io.insts_PD        := insts_PD
 
     val fix_index = !need_fix(0)

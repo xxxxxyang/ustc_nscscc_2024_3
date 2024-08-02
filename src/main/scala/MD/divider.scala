@@ -31,7 +31,7 @@ class divider extends Module{
     //result sign
     val res_sign_stage1 = RegInit(false.B)
     when(!io.busy){
-        res_sign_stage1 := Mux(io.op(2),false.B,Mux(io.op(1),io.src1(31),io.src1(31)^io.src2(31)))
+        res_sign_stage1 := Mux(io.op(1),false.B,Mux(io.op(0),io.src1(31),io.src1(31)^io.src2(31)))
     }
     //operation code
     val op_stage1 = RegInit(0.U(4.W))
@@ -91,5 +91,5 @@ class divider extends Module{
 
     //res
     val res_temp = Mux(op_stage2(0),quo(64,33),quo(31,0))
-    io.res := Mux(op_stage2(1)&&res_sign_stage2,~res_temp+1.U,res_temp)
+    io.res := Mux((~op_stage2(1))&&res_sign_stage2,~res_temp+1.U,res_temp)
 }

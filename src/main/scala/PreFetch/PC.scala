@@ -5,6 +5,7 @@ import Interfaces._
 import InstPacks._
 import Util._
 
+// predict_fail > pd_fix > stall
 //(pc, pc+4) 和 inst_valid 将用于取指
 class PC() extends Module {
     val io = IO(new Bundle{
@@ -37,13 +38,14 @@ class PC() extends Module {
     }
     val npc = Wire(UInt(32.W))
     npc := Mux(io.pred_jump.asUInt.orR, io.pred_npc, (pc + 8.U)(31, 3) ## 0.U(3.W))
-    val stall = io.stall && (!io.predict_fail) && (!io.pd_fix_en)
-    when(idle || io.stall){
+    when(idle){
         npc := pc
     }.elsewhen(io.predict_fail) {
         npc := io.branch_target
     }.elsewhen(io.pd_fix_en){
         npc := io.pd_fix_target
+    }.elsewhen(io.stall){
+        npc := pc
     }
     pc := npc
 

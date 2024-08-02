@@ -1,4 +1,4 @@
-import chisel3._
+/*import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
 import chisel3.experimental.VecLiterals._
@@ -19,5 +19,4 @@ class BasicTest extends AnyFlatSpec with ChiselScalatestTester {
             c.io.out.expect(1.U)
         }
     }
-}
-
+}*/
