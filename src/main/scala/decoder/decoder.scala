@@ -656,7 +656,7 @@ class Decoder extends Module {
 
     // 前端异常处理
     when(io.inst_FQ.exception.orR){
-        inst_ID.ins_type  := ARITH
+        inst_ID.ins_type  := MD
     }.otherwise{
         inst_ID.exception := exception
     }

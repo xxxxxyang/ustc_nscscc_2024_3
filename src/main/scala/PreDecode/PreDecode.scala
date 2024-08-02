@@ -59,7 +59,7 @@ class PreDecode extends Module {
     // 前端异常处理
     for(i <- 0 until 2){
         when(io.insts(i).exception.orR){
-            insts_PD(i).inst := 0x00100000.U //ADD r0, r0, r0
+            insts_PD(i).inst := 0x001C0000.U //MUL r0, r0, r0
         }
     }
 

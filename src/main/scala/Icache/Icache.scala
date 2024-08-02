@@ -161,10 +161,10 @@ class Icache extends Module{
 
     /* hit */
     val cache_hit               = WireDefault(false.B)                                  // cache命中
-    val cache_hit_oh            = VecInit.tabulate(2){i => valid_IF(i) && (tag_IF(i) === tag_RM)}             // cache line向量的独热码
-    cache_hit                   := cache_hit_oh.asUInt.orR
-    val cache_hit_line          = Mux(cache_hit, OHToUInt(cache_hit_oh), 0.U)
-    //cache_miss_RM               := !cache_hit
+    val cache_hit_oh            = VecInit.tabulate(2)(i => valid_IF(i) && tag_IF(i) === tag_RM)             // cache line向量的独热码
+    val cache_hit_line          = OHToUInt(cache_hit_oh)                                // 命中的cache line序号（cmem[0]或cmem[1]），若未命中则为0
+    cache_hit                   := cache_hit_line.orR
+    // cache_miss_RM               := !cache_hit
 
     // cacop
     val cacop_way_RM    = Mux(cacop_op_RM(1), cache_hit_line, paddr_RM(0))              // 地址直接索引或查询索引路选择
@@ -223,6 +223,7 @@ class Icache extends Module{
                     data_sel        := FROM_CMEM
                     addr_sel        := FROM_PIPE
                     lru_hit_upd     := cache_hit
+                    cache_miss_RM    := !cache_hit
                     inst_valid      := cache_hit
                     cache_miss_RM   := !cache_hit
                 }
