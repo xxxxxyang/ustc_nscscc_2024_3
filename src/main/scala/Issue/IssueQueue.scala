@@ -68,7 +68,7 @@ class IssueQueue(n: Int, ordered: Boolean) extends Module{
     
     val tail_pop   = tail - is_pop
     val mask_pop   = Mux(is_pop, mask_sub1(mask), mask)
-    val mask_keep  = pop.asUInt - 1.U
+    val mask_keep  = Mux(is_pop, pop.asUInt - 1.U, mask)
     val mask_shift = mask_pop & ~mask_keep
     
     //insert
@@ -97,10 +97,13 @@ class IssueQueue(n: Int, ordered: Boolean) extends Module{
             queue_nxt := queue(i)
         }.elsewhen(mask_shift(i)){
             if(i != n-1) queue_nxt := queue(i+1)
-        }.elsewhen(io.insts_valid.asUInt.orR  && i.U === tail_pop){
-            queue_nxt := to_insert(0)
-        }.elsewhen(io.insts_valid.asUInt.andR && i.U === tail_pop + 1.U){
-            queue_nxt := to_insert(0)
+        }.otherwise{
+            when(io.insts_valid.asUInt.orR  && i.U === tail_pop){
+                queue_nxt := to_insert(0)
+            }
+            when(io.insts_valid.asUInt.andR && i.U === tail_pop + 1.U){
+                queue_nxt := to_insert(1)
+            }
         }
         //wake
         when(VecInit(io.wake_preg.map(_ === queue_nxt.inst.prj)).asUInt.orR){
