@@ -64,7 +64,7 @@ class CPU extends Module {
     val fq = Module(new FetchQueue)
     // ID
     val decode = Seq(Module(new Decoder), Module(new Decoder))
-    val freelist = Module(new FreeList(PREG_SIZE))
+    val freelist = Module(new FreeList(PREG_SIZE - 1))
     // Rename
     val rename = Module(new Rename(PREG_SIZE))
     val dp = Module(new Dispatch(IQ_SIZE(1)))
@@ -442,7 +442,7 @@ class CPU extends Module {
     dcache.io.cacop_op := inst_rf3.imm(4,3)
     dcache.io.uncache := reset.asBool
     dcache.io.rob_index_TC := inst_ex3.rob_index
-    dcache.io.paddr_TC := prj_data_ex3
+    dcache.io.paddr_TC := reg1(dcache.io.addr_EX, re3_stall)
     dcache.io.exception := exception_mem
     dcache.io.rob_index_CMT := rob.io.rob_index_cmt
     dcache.io.d_rready := arb.io.d_rready
