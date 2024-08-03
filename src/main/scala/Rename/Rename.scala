@@ -36,9 +36,9 @@ class Rename(n:Int) extends Module {
 
     //处理WAW相关
     crat.io.rd_valid(1) := io.rd_valid(1)&io.rename_en(1)
-    crat.io.rd_valid(0) := Mux(io.rd_valid(1)&(io.rd(0)===io.rd(1)),false.B,io.rd_valid(0)&io.rename_en(0)) 
-    io.pprd(1) := crat.io.pprd(1)
-    io.pprd(0) := Mux(io.rd_valid(1)&(io.rd(0)===io.rd(1)),io.prd(1),crat.io.pprd(0))
+    crat.io.rd_valid(0) := Mux(io.rd_valid(1)&(io.rd(0)===io.rd(1)),false.B,io.rd_valid(0)&io.rename_en(0))
+    io.pprd(0) := crat.io.pprd(0)
+    io.pprd(1) := Mux(io.rd_valid(0)&(io.rd(0)===io.rd(1)),io.prd(0),crat.io.pprd(1))
 
     //rj和rk的物理寄存器编号,处理RAW相关
     crat.io.rj := io.rj
