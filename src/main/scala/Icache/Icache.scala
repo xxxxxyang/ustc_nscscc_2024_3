@@ -160,10 +160,10 @@ class Icache extends Module{
 
 
     /* hit */
-    val cache_hit               = WireDefault(false.B)                                  // cache命中
-    val cache_hit_oh            = VecInit.tabulate(2)(i => valid_IF(i) && tag_IF(i) === tag_RM)             // cache line向量的独热码
+    // val hit_RM          = VecInit.tabulate(2)(i => valid_r_RM(i) && !(tag_r_RM(i) ^ tag_RM))    // 标签相等且有效 wire型
+    val cache_hit_oh            = VecInit.tabulate(2)(i => valid_IF(i) && !(tag_IF(i) ^ tag_RM))             // cache line向量的独热码
     val cache_hit_line          = OHToUInt(cache_hit_oh)                                // 命中的cache line序号（cmem[0]或cmem[1]），若未命中则为0
-    cache_hit                   := cache_hit_line.orR
+    val cache_hit               = cache_hit_oh.asUInt.orR                                                     // 判断是否命中 wire型    
     // cache_miss_RM               := !cache_hit
 
     // cacop
@@ -243,7 +243,7 @@ class Icache extends Module{
             cmem_we(lru_sel)    := !cacop_en_RM
         }
         is(s_wait){
-            state               := Mux(stall, s_idle, s_wait)
+            state               := Mux(stall, s_wait, s_idle)
             data_sel            := FROM_RBUF
             inst_valid          := true.B
             cache_miss_RM       := false.B
