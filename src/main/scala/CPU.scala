@@ -64,7 +64,7 @@ class CPU extends Module {
     val fq = Module(new FetchQueue)
     // ID
     val decode = Seq(Module(new Decoder), Module(new Decoder))
-    val freelist = Module(new FreeList(PREG_SIZE))
+    val freelist = Module(new FreeList(PREG_SIZE - 1))
     // Rename
     val rename = Module(new Rename(PREG_SIZE))
     val dp = Module(new Dispatch(IQ_SIZE(1)))
