@@ -499,7 +499,7 @@ class CPU extends Module {
 
     rob.io.wb := VecInit(
         {val wb = Wire(new WB_to_ROB)
-            wb.valid := inst_wb0.rd_valid
+            wb.valid := inst_wb0.inst_valid
             wb.rob_index := inst_wb0.rob_index
             wb.exception := DontCare
             wb.predict_fail := DontCare
@@ -508,7 +508,7 @@ class CPU extends Module {
             wb.rf_wdata := rf.io.wdata(0)
         wb},
         {val wb = Wire(new WB_to_ROB)
-            wb.valid := inst_wb1.rd_valid
+            wb.valid := inst_wb1.inst_valid
             wb.rob_index := inst_wb1.rob_index
             wb.exception := DontCare
             wb.predict_fail := DontCare
@@ -517,7 +517,7 @@ class CPU extends Module {
             wb.rf_wdata := rf.io.wdata(1)
         wb},
         {val wb = Wire(new WB_to_ROB)
-            wb.valid := inst_wb2.rd_valid
+            wb.valid := inst_wb2.inst_valid
             wb.rob_index := inst_wb2.rob_index
             wb.exception := DontCare
             wb.predict_fail := predict_fail_wb
@@ -526,7 +526,7 @@ class CPU extends Module {
             wb.rf_wdata := rf.io.wdata(2)
         wb},
         {val wb = Wire(new WB_to_ROB)
-            wb.valid := inst_wb3.rd_valid
+            wb.valid := inst_wb3.inst_valid
             wb.rob_index := inst_wb3.rob_index
             wb.exception := exception_wb
             wb.predict_fail := DontCare
