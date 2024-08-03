@@ -442,7 +442,7 @@ class CPU extends Module {
     dcache.io.cacop_op := inst_rf3.imm(4,3)
     dcache.io.uncache := reset.asBool
     dcache.io.rob_index_TC := inst_ex3.rob_index
-    dcache.io.paddr_TC := prj_data_ex3
+    dcache.io.paddr_TC := reg1(dcache.io.addr_EX)
     dcache.io.exception := exception_mem
     dcache.io.rob_index_CMT := rob.io.rob_index_cmt
     dcache.io.d_rready := arb.io.d_rready
