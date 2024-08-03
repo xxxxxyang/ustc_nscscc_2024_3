@@ -59,7 +59,7 @@ class FreeList(n:Int) extends Module {
         queue(OHToUInt(tail_sel(0))) := io.commit_pprd(0)
     }
     when(io.commit_pprd_valid(1) && io.commit_en(1) && (io.commit_pprd(1) =/= 0.U)){
-            queue(OHToUInt(tail_sel(1))) := io.commit_pprd(1)
+        queue(OHToUInt(tail_sel(1))) := io.commit_pprd(1)
     }
     tail := tail_sel(1)
 }
