@@ -136,7 +136,7 @@ class ROB() extends Module{
         }
     }
     io.rob_index := VecInit.tabulate(2)(i => Cat(tail, i.U))
-    io.full := (tail + 1.U === head)
+    io.full := (tail + 1.U === head(ROB_W - 1, 1))
 
     // wb: 接收4个FU的结果，填入表项
     for(i <- 0 until 4) {
@@ -204,7 +204,7 @@ class ROB() extends Module{
         arat.pprd      := commit_item(i).pprd
         io.arat(i) := reg1(arat)
     }
-    head := wrap(head +& PopCount(commit_en), ROB_SIZE.U)
+    head := wrap(head + PopCount(commit_en), ROB_SIZE.U)
     
     val update_item = Mux(commit_en(0), Mux(commit_en(1), commit_item(1), commit_item(0)), 0.U.asTypeOf(new ROB_Item))
     
