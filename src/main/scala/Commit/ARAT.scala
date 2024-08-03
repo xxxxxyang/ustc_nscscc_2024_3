@@ -32,7 +32,7 @@ class ARAT() extends Module{
             arat(io.rob(i).pprd) := false.B
         }
     }
-    head := wrap(head +& PopCount(rd_write), PREG_SIZE.U)
+    head := wrap(head +& PopCount(rd_write), (PREG_SIZE - 1).U)
     io.arat := arat
     io.head := head
     // ras
