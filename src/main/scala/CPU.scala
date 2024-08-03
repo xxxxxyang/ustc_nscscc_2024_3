@@ -279,7 +279,7 @@ class CPU extends Module {
 
     dcache_miss_hazard  := dcache.io.cache_miss
     sb_full_hazard      := sb.io.full && inst_ex3.mem_type(2)
-    sb_cmt_hazard       := sb.io.wb_valid && inst_rf3.mem_type(4)
+    sb_cmt_hazard       := sb.io.wb_valid && inst_rf3.mem_type(4) && inst_rf3.inst_valid
     val ir3_stall        = dcache_miss_hazard || sb_full_hazard || sb_cmt_hazard
     iq3.io.insts        := insts_DP
     iq3.io.insts_valid  := dp.io.inst_valid(3)
@@ -427,7 +427,7 @@ class CPU extends Module {
     sb.io.flush := predict_fail
     sb.io.addr_ex := prj_data_ex3
     sb.io.st_data_ex := prk_data_ex3
-    sb.io.mem_type_ex := Mux(re3_stall, 0.U, inst_ex3.mem_type)
+    sb.io.mem_type_ex := Mux(re3_stall, 0.U, inst_ex3.mem_type & Fill(5,inst_ex3.inst_valid))
     sb.io.uncache_ex := reset.asBool
     sb.io.st_num := rob.io.store_num_cmt
     sb.io.dcache_miss := dcache_miss_hazard
