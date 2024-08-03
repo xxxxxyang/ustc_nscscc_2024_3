@@ -217,15 +217,14 @@ class Dcache extends Module{
     val rob_index_MEM           = rob_index_reg_TC_MEM
 
     /* hit index */
-    val hit_MEM                 = hit_reg_TC_MEM
-    val hit_oh                  = UIntToOH(hit_MEM)
-    val hit_index_MEM           = OHToUInt(hit_oh)
+    val hit_MEM                 = VecInit.tabulate(2)(i => hit_reg_TC_MEM(i)).asUInt
+    val hit_index_MEM           = OHToUInt(hit_MEM)
     val cache_hit_MEM           = hit_MEM.orR
     val cache_miss_MEM          = WireDefault(false.B)
     cache_miss_stall            := cache_miss_MEM
 
     /* cacop logic */
-    val cacop_way_MEM   = Mux(cacop_op_MEM(1), hit_index_MEM(1), addr_MEM(0))
+    val cacop_way_MEM   = Mux(cacop_op_MEM(1), hit_index_MEM, addr_MEM(0))
     val cacop_exec_MEM  = Mux(cacop_op_MEM(1), cache_hit_MEM, true.B)
 
     /* decode */
@@ -255,7 +254,7 @@ class Dcache extends Module{
 
     /* rdata logic */
     val data_sel                = WireDefault(FROM_RBUF)
-    val cmem_rdata_group        = VecInit.tabulate(OFFSET_DEPTH)(i => (0.U(32.W) ## cmem_rdata_MEM(hit_index_MEM(1)))(8*i+31, 8*i))
+    val cmem_rdata_group        = VecInit.tabulate(OFFSET_DEPTH)(i => (0.U(32.W) ## cmem_rdata_MEM(hit_index_MEM))(8*i+31, 8*i))
     val rbuf_group              = VecInit.tabulate(OFFSET_DEPTH)(i => (0.U(32.W) ## ret_buf)(8*i+31, 8*i))
     val rdata_temp              = Mux(data_sel === FROM_RBUF, rbuf_group(offset_MEM), cmem_rdata_group(offset_MEM))
     val rmask                   = WireDefault(0.U(32.W))
@@ -278,7 +277,7 @@ class Dcache extends Module{
     val is_store_MEM            = mem_type_MEM(2)
     val is_load_MEM             = !is_store_MEM
     when(dirty_we){
-        val write_way           = Mux(cache_hit_MEM, hit_index_MEM(1), lru_sel)
+        val write_way           = Mux(cache_hit_MEM, hit_index_MEM, lru_sel)
         dirty_table(write_way)(index_MEM)   := true.B
     }.elsewhen(dirty_clean){
         dirty_table(lru_sel)(index_MEM)     := false.B
@@ -287,6 +286,7 @@ class Dcache extends Module{
     /* write logic */
     // 写入cmem
     for(i <- 0 until 2){
+        tag_addra(i)            := index_MEM
         tag_dina(i)             := Mux(cacop_en_MEM, 0.U, true.B ## tag_MEM)
     }
     val block_offset            = offset_MEM ## 0.U(3.W)
@@ -304,7 +304,7 @@ class Dcache extends Module{
     val wbuf_we                 = WireDefault(false.B)
     when(wbuf_we){
         when(cacop_en_MEM){
-            val cmem_wb_idx = Mux(cacop_op_MEM(1), hit_index_MEM(1), addr_MEM(0))
+            val cmem_wb_idx = Mux(cacop_op_MEM(1), hit_index_MEM, addr_MEM(0))
             wrt_buf := cmem_rdata_MEM(cmem_wb_idx) ## addr_MEM                      // 需要写的cache line的数据拼接addr
         }.elsewhen(uncache_MEM){
             wrt_buf := 0.U((8*OFFSET_DEPTH-32).W) ## wdata_MEM ## addr_MEM   // 非缓存操作，写入数据拼接addr,前60B补零
@@ -346,7 +346,7 @@ class Dcache extends Module{
                     cache_miss_MEM                  := !cache_hit_MEM
                     lru_hit_upd                     := cache_hit_MEM
                     data_sel                        := FROM_CMEM
-                    cmem_we(hit_index_MEM(1))       := Mux(is_store_MEM && cache_hit_MEM, wmask_byte, 0.U)
+                    cmem_we(hit_index_MEM)       := Mux(is_store_MEM && cache_hit_MEM, wmask_byte, 0.U)
                     dirty_we                        := is_store_MEM
                     wbuf_we                         := !cache_hit_MEM
                     wfsm_en                         := !cache_hit_MEM
