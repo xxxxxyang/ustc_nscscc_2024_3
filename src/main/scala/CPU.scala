@@ -254,8 +254,7 @@ class CPU extends Module {
     iq0.io.stall        := ir0_stall || reg1(ir0_stall)
     iq0.io.stall_in     := iq_full || rob.io.full
     iq0.io.flush        := predict_fail
-    val inst_iq0 = WireDefault(iq0.io.issue_inst)
-    inst_iq0.inst_valid := iq0.io.issue_valid
+    val inst_iq0 = Mux(iq0.io.issue_valid, iq0.io.issue_inst, 0.U.asTypeOf(new pack_DP))
 
     iq1.io.insts        := insts_DP
     iq1.io.insts_valid  := dp.io.inst_valid(1)
@@ -264,8 +263,7 @@ class CPU extends Module {
     iq1.io.stall        := reset.asBool
     iq1.io.stall_in     := iq_full || rob.io.full
     iq1.io.flush        := predict_fail
-    val inst_iq1 = WireDefault(iq1.io.issue_inst)
-    inst_iq1.inst_valid := iq1.io.issue_valid
+    val inst_iq1 = Mux(iq1.io.issue_valid, iq1.io.issue_inst, 0.U.asTypeOf(new pack_DP))
 
     iq2.io.insts        := insts_DP
     iq2.io.insts_valid  := dp.io.inst_valid(2)
@@ -274,8 +272,7 @@ class CPU extends Module {
     iq2.io.stall        := reset.asBool
     iq2.io.stall_in     := iq_full || rob.io.full
     iq2.io.flush        := predict_fail
-    val inst_iq2 = WireDefault(iq2.io.issue_inst)
-    inst_iq2.inst_valid := iq2.io.issue_valid
+    val inst_iq2 = Mux(iq2.io.issue_valid, iq2.io.issue_inst, 0.U.asTypeOf(new pack_DP))
 
     dcache_miss_hazard  := dcache.io.cache_miss
     sb_full_hazard      := sb.io.full && inst_ex3.mem_type(2)
@@ -288,8 +285,7 @@ class CPU extends Module {
     iq3.io.stall        := ir3_stall || reg1(ir3_stall)
     iq3.io.stall_in     := iq_full || rob.io.full
     iq3.io.flush        := predict_fail
-    val inst_iq3 = WireDefault(iq3.io.issue_inst)
-    inst_iq3.inst_valid := iq3.io.issue_valid
+    val inst_iq3 = Mux(iq3.io.issue_valid, iq3.io.issue_inst, 0.U.asTypeOf(new pack_DP))
 
     val inst_rf1 = Wire(new pack_DP)
     val inst_rf2 = Wire(new pack_DP)

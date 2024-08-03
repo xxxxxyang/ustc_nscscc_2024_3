@@ -286,6 +286,7 @@ class Dcache extends Module{
     /* write logic */
     // 写入cmem
     for(i <- 0 until 2){
+        tag_addra(i)            := index_MEM
         tag_dina(i)             := Mux(cacop_en_MEM, 0.U, true.B ## tag_MEM)
     }
     val block_offset            = offset_MEM ## 0.U(3.W)
