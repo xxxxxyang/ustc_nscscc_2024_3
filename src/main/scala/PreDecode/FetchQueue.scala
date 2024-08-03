@@ -68,5 +68,6 @@ class FetchQueue() extends Module{
     when(io.flush){
         head := 1.U
         tail := 1.U
+        cur := 0.U
     }
 } 
