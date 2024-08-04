@@ -132,6 +132,7 @@ class ROB() extends Module{
             rob(i)(tail).is_priv_ls  := io.dp(i).priv_vec(12, 10).orR
             rob(i)(tail).inst        := io.dp(i).inst
             rob(i)(tail).complete    := false.B
+            rob(i)(tail).predict_fail:= false.B
             tail := tail + 1.U
         }
     }

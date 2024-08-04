@@ -41,9 +41,9 @@ class CRAT(n:Int) extends Module {
         }
     }.otherwise{
         for(i <- 0 until 2){
+            rat(io.alloc_preg(i)).areg := io.rd(i)  //将rd映射到新的物理寄存器
             when(io.rd_valid(i)){
                 rat(io.pprd(i)).valid := false.B            //更新CRAT时，将rd之前映射的物理寄存器中valid位置为false
-                rat(io.alloc_preg(i)).areg  := io.rd(i)  //将rd映射到新的物理寄存器
                 rat(io.alloc_preg(i)).valid := true.B       //将新的物理寄存器的valid位置为true
                 rat(io.alloc_preg(i)).ready := false.B      //新的物理寄存器的ready位置为false
             }
