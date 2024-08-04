@@ -150,8 +150,8 @@ class ROB() extends Module{
             item.complete := true.B
             item.rf_wdata := io.wb(i).rf_wdata
             if (i == 0){ // MD
-                //ERTN
-                item.branch_target := Mux(item.exception(7), item.pc + 4.U, io.wb(i).branch_target)
+                //BADV or ERTN
+                item.branch_target := Mux(item.exception(7), item.pc, io.wb(i).branch_target)
             }
             if (i == 2){ // BR
                 item.predict_fail  := io.wb(i).predict_fail
@@ -202,7 +202,7 @@ class ROB() extends Module{
     for(i <- 0 until 2) {
         val arat = Wire(new ROB_to_ARAT)
         arat.commit_en := commit_en(i)
-        arat.rd_valid  := commit_item(i).rd_valid
+        arat.rd_valid  := commit_item(i).rd_valid && !commit_item(i).exception(7)
         arat.prd       := commit_item(i).prd
         arat.pprd      := commit_item(i).pprd
         io.arat(i) := reg1(arat)
