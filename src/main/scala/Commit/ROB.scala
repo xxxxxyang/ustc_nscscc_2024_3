@@ -220,7 +220,7 @@ class ROB() extends Module{
             update_item.branch_target, update_item.pc + 4.U))
     io.predict_fail_cmt  := reg1(predict_fail_cmt)
     io.branch_target_cmt := reg1(branch_target_cmt)
-    io.exception_cmt     := reg1(update_item.exception)
+    io.exception_cmt     := reg1(Mux(interrupt, 0x80.U(8.W), update_item.exception))
     when(predict_fail_cmt || io.predict_fail_cmt){
         head := 0.U
         tail := 0.U
