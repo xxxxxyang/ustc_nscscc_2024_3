@@ -149,7 +149,7 @@ class CPU extends Module {
     icache.io.addr_IF    := pc.io.pc
     icache.io.paddr_IF   := pc.io.pc // todo: mmu
     icache.io.exception  := reset.asUInt
-    icache.io.uncache_IF := reset.asBool
+    icache.io.uncache_IF := (pc.io.pc(31,16) === "hbfaf".U) || (pc.io.pc(31,16) === "h1faf".U)
     icache.io.cacop_en   := reset.asBool
     icache.io.cacop_op   := reset.asUInt
     icache.io.stall      := fq.io.full
@@ -424,7 +424,7 @@ class CPU extends Module {
     sb.io.addr_ex := prj_data_ex3
     sb.io.st_data_ex := prk_data_ex3
     sb.io.mem_type_ex := Mux(re3_stall, 0.U, inst_ex3.mem_type & Fill(5,inst_ex3.inst_valid))
-    sb.io.uncache_ex := reset.asBool
+    sb.io.uncache_ex := (prj_data_ex3(31,16) === "hbfaf".U) || (prj_data_ex3(31,16) === "h1faf".U)
     sb.io.st_num := rob.io.store_num_cmt
     sb.io.dcache_miss := dcache_miss_hazard
     sb.io.em_stall := em_stall
@@ -436,7 +436,7 @@ class CPU extends Module {
     dcache.io.store_cmt_EX := sb.io.wb_valid
     dcache.io.cacop_en := Mux(sb.io.wb_valid, false.B, inst_rf3.priv_vec(10) && inst_rf3.imm(2,0) === 1.U)
     dcache.io.cacop_op := inst_rf3.imm(4,3)
-    dcache.io.uncache := reset.asBool
+    dcache.io.uncache := (prj_data_ex3(31,16) === "hbfaf".U) || (prj_data_ex3(31,16) === "h1faf".U)
     dcache.io.rob_index_TC := inst_ex3.rob_index
     dcache.io.paddr_TC := reg1(dcache.io.addr_EX, re3_stall)
     dcache.io.exception := exception_mem
