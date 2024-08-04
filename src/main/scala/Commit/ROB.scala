@@ -160,7 +160,7 @@ class ROB() extends Module{
             }
             if (i == 3){ // LS
                 item.exception     := io.wb(i).exception
-                item.branch_target := io.wb(i).branch_target + 4.U
+                item.branch_target := io.wb(i).branch_target
             }
         }
     }
