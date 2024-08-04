@@ -202,8 +202,10 @@ class CPU extends Module {
     val inst_ex0_2 = Wire(new pack_DP)
     val inst_rf3   = Wire(new pack_DP)
     val inst_ex3   = Wire(new pack_DP)
+    val inst_mem   = Wire(new pack_DP)
+    val inst_wb3   = Wire(new pack_DP)
 
-    rename.io.wake_preg  := VecInit(inst_ex0_2.prd, iq1.io.to_wake, iq2.io.to_wake, inst_ex3.prd)
+    rename.io.wake_preg  := VecInit(inst_ex0_2.prd, iq1.io.to_wake, iq2.io.to_wake, inst_wb3.prd)
     rename.io.wake_valid := VecInit(!mdu.io.busy, iq1.io.issue_valid, iq2.io.issue_valid, !dcache_miss_hazard)
     
     val insts_RN = VecInit.tabulate(2)(i =>
@@ -246,7 +248,7 @@ class CPU extends Module {
     // issue -------------------------------------
     iq_full := iq0.io.full || iq1.io.full || iq2.io.full || iq3.io.full
 
-    val ir0_stall        = mdu.io.busy 
+    val ir0_stall        = mdu.io.busy
     iq0.io.insts        := insts_DP
     iq0.io.insts_valid  := dp.io.inst_valid(0)
     iq0.io.prj_ready    := rename.io.prj_ready
@@ -290,8 +292,8 @@ class CPU extends Module {
     val inst_rf1 = Wire(new pack_DP)
     val inst_rf2 = Wire(new pack_DP)
 
-    val iq_self_wake_preg = VecInit(Mux(!mdu.io.busy, inst_ex0_2.prd, 0.U), iq1.io.to_wake, iq2.io.to_wake, inst_ex3.prd)
-    val iq_mutual_wake_preg = VecInit(Mux(!mdu.io.busy, inst_ex0_2.prd, 0.U), inst_rf1.prd, inst_rf2.prd, Mux(!dcache_miss_hazard, inst_ex3.prd, 0.U))
+    val iq_self_wake_preg = VecInit(Mux(!mdu.io.busy, inst_ex0_2.prd, 0.U), iq1.io.to_wake, iq2.io.to_wake, inst_wb3.prd)
+    val iq_mutual_wake_preg = VecInit(Mux(!mdu.io.busy, inst_ex0_2.prd, 0.U), inst_rf1.prd, inst_rf2.prd, Mux(!dcache_miss_hazard, inst_wb3.prd, 0.U))
 
     iq0.io.wake_preg := VecInit(iq_self_wake_preg(0),iq_mutual_wake_preg(1),iq_mutual_wake_preg(2),iq_mutual_wake_preg(3))
     iq1.io.wake_preg := VecInit(iq_mutual_wake_preg(0),iq_self_wake_preg(1),iq_self_wake_preg(2),iq_mutual_wake_preg(3))
@@ -413,7 +415,7 @@ class CPU extends Module {
     //EX-MEM Reg
     val em_stall = dcache_miss_hazard
     val em_flush = predict_fail || (!em_stall && sb_full_hazard)
-    val inst_mem = reg1(inst_ex3, em_stall, em_flush)
+        inst_mem := reg1(inst_ex3, em_stall, em_flush)
     val prj_data_mem = reg1(prj_data_ex3, em_stall, em_flush)
     val prk_data_mem = reg1(prk_data_ex3, em_stall, em_flush)
     val llbit_mem = reg1(csr.io.llbit_global, em_stall, em_flush)
@@ -464,7 +466,7 @@ class CPU extends Module {
     val inst_wb2 = reg1(inst_ex2, false.B, predict_fail)
     val wb3_stall = false.B
     val wb3_flush = predict_fail || dcache_miss_hazard
-    val inst_wb3 = reg1(inst_mem, wb3_stall, wb3_flush)
+     inst_wb3 := reg1(inst_mem, wb3_stall, wb3_flush)
     
     //0
     val csr_wdata_wb = reg1(csr_wdata_ex_2, false.B, predict_fail || mdu.io.busy)
@@ -484,7 +486,7 @@ class CPU extends Module {
     val mem_rdata_wb     = reg1(ls_wb_data, wb3_stall, wb3_flush)
     // write back -------------------------
     rf.io.prd   := VecInit(inst_wb0.prd, inst_wb1.prd, inst_wb2.prd, inst_wb3.prd)
-    rf.io.we    := VecInit(inst_wb0.rd_valid, inst_wb1.rd_valid, inst_wb2.rd_valid, inst_wb3.rd_valid && exception_wb(7))
+    rf.io.we    := VecInit(inst_wb0.rd_valid, inst_wb1.rd_valid, inst_wb2.rd_valid, inst_wb3.rd_valid && !exception_wb(7))
     rf.io.wdata := VecInit(md_out_wb, alu_out_wb1, alu_out_wb2, mem_rdata_wb)
 
     bypass.io.prj_ex := VecInit(inst_ex0.prj, inst_ex1.prj, inst_ex2.prj, inst_rf3.prj)
