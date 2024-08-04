@@ -256,7 +256,7 @@ class Dcache extends Module{
     val data_sel                = WireDefault(FROM_RBUF)
     val cmem_rdata_group        = VecInit.tabulate(OFFSET_DEPTH)(i => (0.U(32.W) ## cmem_rdata_MEM(hit_index_MEM))(8*i+31, 8*i))
     val rbuf_group              = VecInit.tabulate(OFFSET_DEPTH)(i => (0.U(32.W) ## ret_buf)(8*i+31, 8*i))
-    val rdata_temp              = Mux(data_sel === FROM_RBUF, rbuf_group(offset_MEM), cmem_rdata_group(offset_MEM))
+    val rdata_temp              = Mux(data_sel === FROM_RBUF, Mux(uncache_MEM, ret_buf(8*OFFSET_DEPTH-1, 8*OFFSET_DEPTH-32), rbuf_group(offset_MEM)), cmem_rdata_group(offset_MEM))
     val rmask                   = WireDefault(0.U(32.W))
     when(mem_type_MEM(1, 0) === 0.U){
         rmask                   := "h0000000f".U
