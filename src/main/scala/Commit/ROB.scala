@@ -53,7 +53,7 @@ class ROB() extends Module{
         val arat            = Output(Vec(2, new ROB_to_ARAT))
         val full            = Output(Bool())
         val stall           = Input(Bool())
-        val interrupt_vec   = Output(UInt(12.W))
+        val interrupt_vec   = Input(UInt(12.W))
         // priv
         val ex = Input(new Bundle{
             val priv_vec       = Input(UInt(10.W))
