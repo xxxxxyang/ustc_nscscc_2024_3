@@ -205,7 +205,7 @@ class CPU extends Module {
     val inst_mem   = Wire(new pack_DP)
     val inst_wb3   = Wire(new pack_DP)
 
-    rename.io.wake_preg  := VecInit(inst_ex0_2.prd, iq1.io.to_wake, iq2.io.to_wake, inst_wb3.prd)
+    rename.io.wake_preg  := VecInit(Mux(inst_ex0_2.rd_valid, inst_ex0_2.prd, 0.U), iq1.io.to_wake, iq2.io.to_wake, Mux(inst_wb3.rd_valid, inst_wb3.prd, 0.U))
     rename.io.wake_valid := VecInit(!mdu.io.busy, iq1.io.issue_valid, iq2.io.issue_valid, !dcache_miss_hazard)
     
     val insts_RN = VecInit.tabulate(2)(i =>
@@ -292,8 +292,14 @@ class CPU extends Module {
     val inst_rf1 = Wire(new pack_DP)
     val inst_rf2 = Wire(new pack_DP)
 
-    val iq_self_wake_preg = VecInit(Mux(!mdu.io.busy, inst_ex0_2.prd, 0.U), iq1.io.to_wake, iq2.io.to_wake, inst_wb3.prd)
-    val iq_mutual_wake_preg = VecInit(Mux(!mdu.io.busy, inst_ex0_2.prd, 0.U), inst_rf1.prd, inst_rf2.prd, Mux(!dcache_miss_hazard, inst_wb3.prd, 0.U))
+    val iq_self_wake_preg = VecInit(Mux(!mdu.io.busy && inst_ex0_2.rd_valid, inst_ex0_2.prd, 0.U),
+        iq1.io.to_wake,
+        iq2.io.to_wake,
+        Mux(inst_wb3.rd_valid, inst_wb3.prd, 0.U))
+    val iq_mutual_wake_preg = VecInit(Mux(!mdu.io.busy && inst_ex0_2.rd_valid, inst_ex0_2.prd, 0.U), 
+        Mux(inst_rf1.rd_valid, inst_rf1.prd, 0.U), 
+        Mux(inst_rf2.rd_valid, inst_rf2.prd, 0.U),
+        Mux(inst_wb3.rd_valid, inst_wb3.prd, 0.U))
 
     iq0.io.wake_preg := VecInit(iq_self_wake_preg(0),iq_mutual_wake_preg(1),iq_mutual_wake_preg(2),iq_mutual_wake_preg(3))
     iq1.io.wake_preg := VecInit(iq_mutual_wake_preg(0),iq_self_wake_preg(1),iq_self_wake_preg(2),iq_mutual_wake_preg(3))

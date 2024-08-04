@@ -133,7 +133,9 @@ class ROB() extends Module{
             rob(i)(tail).inst        := io.dp(i).inst
             rob(i)(tail).complete    := false.B
             rob(i)(tail).predict_fail:= false.B
-            tail := tail + 1.U
+            when(!io.stall) {
+                tail := tail + 1.U
+            }
         }
     }
     io.rob_index := VecInit.tabulate(2)(i => Cat(tail, i.U))

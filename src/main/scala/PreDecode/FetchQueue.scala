@@ -56,7 +56,7 @@ class FetchQueue() extends Module{
     // dequeue
     val empty = (tail & head).orR
     io.out_pack  := queue.map(Mux1H(head, _))
-    io.out_valid := !empty
+    io.out_valid := !empty && !io.stall
     when(!io.out_valid){
         io.out_pack(0).inst_valid := false.B
         io.out_pack(1).inst_valid := false.B
