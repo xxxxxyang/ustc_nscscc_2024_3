@@ -1,4 +1,4 @@
-/*import chisel3._
+import chisel3._
 import chisel3.util._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -7,74 +7,72 @@ import chisel3.experimental.BundleLiterals
 import InstPacks._
 import scala.util.Random
 
-class Test_fetch_queue extends AnyFlatSpec with ChiselScalatestTester {
-    import InstPacks.pack_PD
+// class Test_fetch_queue extends AnyFlatSpec with ChiselScalatestTester {
+//     import InstPacks.pack_PD
+//     behavior of "TestModule"
+//     // test class body here
+//     it should "test" in {
+//         test(new FetchQueue){ c =>
+//             for(i <- 0 until 10){
+//                 c.io.in_pack(0).inst_valid.poke(true)
+//                 c.io.in_pack(1).inst_valid.poke(false)
+//                 c.io.in_pack(0).pc.poke(i)
+//                 c.io.in_pack(1).pc.poke(i*2+1)
+//                 val pc0 = c.io.out_pack(0).pc.peek().litValue
+//                 val pc1 = c.io.out_pack(1).pc.peek().litValue
+//                 val valid = c.io.out_valid.peek().litToBoolean
+//                 println(s"Output $i: $valid, $pc0, $pc1")
+//                 c.clock.step(1)
+                
+//             }
+//         }
+//     }
+// }
+
+class Test_issue_queue extends AnyFlatSpec with ChiselScalatestTester {
     behavior of "TestModule"
     // test class body here
     it should "test" in {
-        test(new Diff_test_fetch_queue){ c =>
-            for( _ <- 0 until 1000){
-                val flush = Random.nextBoolean().B
-                val stall = Random.nextBoolean()
-                val in_pack_1_inst_valid = Random.nextBoolean().B
-                val in_pack_1_pc = Random.nextInt(1 << 32).U
-                val in_pack_1_pred_valid = Random.nextBoolean().B
-                val in_pack_1_pred_jump = Random.nextBoolean().B
-                val in_pack_1_pred_npc = Random.nextInt(1 << 32).U
-                val in_pack_1_exception = Random.nextInt(1 << 8).U
-                val in_pack_1_br_cnt = Random.nextInt(1 << 2).U
-                val in_pack_1_inst = Random.nextInt(1 << 32).U
-                val in_pack_2_inst_valid = Random.nextBoolean().B
-                val in_pack_2_pc = Random.nextInt(1 << 32).U
-                val in_pack_2_pred_valid = Random.nextBoolean().B
-                val in_pack_2_pred_jump = Random.nextBoolean().B
-                val in_pack_2_pred_npc = Random.nextInt(1 << 32).U
-                val in_pack_2_exception = Random.nextInt(1 << 8).U
-                val in_pack_2_br_cnt = Random.nextInt(1 << 2).U
-                val in_pack_2_inst = Random.nextInt(1 << 32).U
-
+        test(new IssueQueue(8, false)){ c =>
+            for(i <- 0 until 20){
+                c.io.insts_valid(0).poke(true)
+                c.io.insts(0).pc.poke(i*2)
+                c.io.insts(0).prj.poke(i*2)
+                c.io.prj_ready(0).poke(false)
+                c.io.insts_valid(1).poke(true)
+                c.io.insts(1).pc.poke(i*2+1)
+                c.io.insts(1).prk.poke(i*2+1)
+                c.io.prj_ready(1).poke(false)
+                val full = c.io.full.peek()
+                if(full.litToBoolean) println(s"($i) Full!")
+                else println(s"($i) Input:  ${i*2}, ${i*2+1}")
+                c.io.stall_in.poke(full)
+                val pc = c.io.issue_inst.pc.peek().litValue
+                val valid = c.io.issue_valid.peek().litToBoolean
+                println(s"($i) Output: $valid, $pc")
+                if(i == 6){
+                    c.io.wake_preg(0).poke(1)
+                    c.io.wake_preg(1).poke(3)
+                    c.io.wake_preg(2).poke(4)
+                    c.io.wake_preg(3).poke(6)
+                }
+                else if(i==10){
+                    c.io.wake_preg(0).poke(17)
+                }
+                else{
+                    c.io.wake_preg(0).poke(0)
+                    c.io.wake_preg(1).poke(0)
+                    c.io.wake_preg(2).poke(0)
+                    c.io.wake_preg(3).poke(0)
+                }
                 c.clock.step(1)
-                c.io.mod1.flush.poke(flush)
-                c.io.mod1.stall.poke(stall)
-                c.io.mod2.flush.poke(flush)
-                c.io.mod2.next_read.poke(stall)
-                c.io.mod1.in_pack(0).inst_valid.poke(in_pack_1_inst_valid)
-                c.io.mod1.in_pack(0).pc.poke(in_pack_1_pc)
-                c.io.mod1.in_pack(0).pred_valid.poke(in_pack_1_pred_valid)
-                c.io.mod1.in_pack(0).pred_jump.poke(in_pack_1_pred_jump)
-                c.io.mod1.in_pack(0).pred_npc.poke(in_pack_1_pred_npc)
-                c.io.mod1.in_pack(0).exception.poke(in_pack_1_exception)
-                c.io.mod1.in_pack(0).br_cnt.poke(in_pack_1_br_cnt)
-                c.io.mod1.in_pack(0).inst.poke(in_pack_1_inst)
-                c.io.mod2.insts_pack(0).pc.poke(in_pack_1_pc)
-                c.io.mod2.insts_pack(0).inst.poke(in_pack_1_inst)
-                c.io.mod2.insts_pack(0).inst_valid.poke(in_pack_1_inst_valid)
-                c.io.mod2.insts_pack(0).predict_jump.poke(in_pack_1_pred_jump)
-                c.io.mod2.insts_pack(0).pred_npc.poke(in_pack_1_pred_npc)
-                c.io.mod2.insts_pack(0).exception.poke(in_pack_1_exception)
-                c.io.mod1.in_pack(1).inst_valid.poke(in_pack_2_inst_valid)
-                c.io.mod1.in_pack(1).pc.poke(in_pack_2_pc)
-                c.io.mod1.in_pack(1).pred_valid.poke(in_pack_2_pred_valid)
-                c.io.mod1.in_pack(1).pred_jump.poke(in_pack_2_pred_jump)
-                c.io.mod1.in_pack(1).pred_npc.poke(in_pack_2_pred_npc)
-                c.io.mod1.in_pack(1).exception.poke(in_pack_2_exception)
-                c.io.mod1.in_pack(1).br_cnt.poke(in_pack_2_br_cnt)
-                c.io.mod1.in_pack(1).inst.poke(in_pack_2_inst)
-                c.io.mod2.insts_pack(1).pc.poke(in_pack_2_pc)
-                c.io.mod2.insts_pack(1).inst.poke(in_pack_2_inst)
-                c.io.mod2.insts_pack(1).inst_valid.poke(in_pack_2_inst_valid)
-                c.io.mod2.insts_pack(1).predict_jump.poke(in_pack_2_pred_jump)
-                c.io.mod2.insts_pack(1).pred_npc.poke(in_pack_2_pred_npc)
-                c.io.mod2.insts_pack(1).exception.poke(in_pack_2_exception)
-
-                c.io.diff.out_valid.expect(true.B)
-                c.io.diff.full.expect(true.B)
-
+                
             }
         }
     }
 }
 
+/*
 class Diff_test_fetch_queue extends Module{
     val io = IO(new Bundle{
         val mod1 = new Bundle {

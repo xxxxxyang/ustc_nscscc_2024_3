@@ -13,7 +13,10 @@ class Dispatch(n: Int) extends Module {
 
   val queue_hit = Wire (Vec(2,UInt(4.W)))
   for(i <- 0 until 2){
-    queue_hit(i) := UIntToOH(Mux(io.inst_pack(i).ins_type(2).asBool, Mux(io.elem(0) <= io.elem(1), 1.U(2.W), 2.U(2.W)), io.inst_pack(i).ins_type(1,0))) & Fill(4, io.inst_pack(i).inst_valid)
+    queue_hit(i) := UIntToOH(
+      Mux(io.inst_pack(i).ins_type(2).asBool,
+        Mux(io.elem(0) <= io.elem(1), 1.U(2.W), 2.U(2.W)), io.inst_pack(i).ins_type(1,0))
+      ) & Fill(4, io.inst_pack(i).inst_valid)
   }
 
   for(i <- 0 until 4){
