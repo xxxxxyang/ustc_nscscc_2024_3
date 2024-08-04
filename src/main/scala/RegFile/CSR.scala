@@ -132,7 +132,7 @@ class CSR(timer_width: Int) extends Module{
 
     // EENTRY：例外入口地址
     when(io.we && io.waddr === CSR_EENTRY){
-        eentry := io.wdata(31,6) ## 0.U(9.W)
+        eentry := io.wdata(31,6) ## 0.U(6.W)
     }
 
     // CPUID: 处理器编号
@@ -211,7 +211,9 @@ class CSR(timer_width: Int) extends Module{
     }
 
     //TVAL: 定时器值
-    when(tcfg(0) === 1.U){
+    when(io.we && io.waddr === CSR_TCFG){
+        tval := 0.U((32 - timer_width).W) ## io.wdata(timer_width - 1, 2) ## 1.U(2.W)
+    }.elsewhen(tcfg(0) === 1.U){
         when(tval === 0.U){
             tval := 0.U((32-timer_width).W) ## Mux(tcfg(1),tcfg(timer_width-1,2) ## 0.U(2.W), 0.U(timer_width.W))
         }.otherwise{
