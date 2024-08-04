@@ -442,10 +442,10 @@ class CPU extends Module {
     dcache.io.exception := exception_mem
     dcache.io.rob_index_CMT := rob.io.rob_index_cmt
     dcache.io.d_rready := arb.io.d_rready
-    dcache.io.d_rlast := arb.io.rlast
-    dcache.io.d_rdata := arb.io.rdata
-    dcache.io.d_wready := arb.io.wready
-    dcache.io.d_bvalid := arb.io.bvalid
+    dcache.io.d_rlast := arb.io.d_rlast
+    dcache.io.d_rdata := arb.io.d_rdata
+    dcache.io.d_wready := arb.io.d_wready
+    dcache.io.d_bvalid := arb.io.d_bvalid
     dcache.io.stall := reset.asBool
     dcache.io.flush := predict_fail
 

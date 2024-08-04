@@ -172,7 +172,7 @@ class Dcache extends Module{
     val cmem_rdata_reg_TC_MEM    = RegInit(VecInit(Seq.fill(2)(0.U((8*OFFSET_DEPTH).W))))
     when(TC_MEM_en){
         paddr_reg_TC_MEM         := Mux(store_cmt_TC || flush_TC, addr_TC, paddr_TC)
-        mem_type_reg_TC_MEM      := Mux(mem_type_TC(2) || uncache_TC || store_cmt_TC, mem_type_TC, 0.U)
+        mem_type_reg_TC_MEM      := Mux(!mem_type_TC(2) || uncache_TC || store_cmt_TC, mem_type_TC, 0.U)
         wdata_reg_TC_MEM         := wdata_TC
         uncache_reg_TC_MEM       := uncache_TC
         hit_reg_TC_MEM           := hit_TC
