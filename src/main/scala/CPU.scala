@@ -330,7 +330,7 @@ class CPU extends Module {
     val inst_ex0 = reg1(inst_rf0, mdu.io.busy, predict_fail)
     val inst_ex1 = reg1(inst_rf1, false.B, predict_fail)
     val inst_ex2 = reg1(inst_rf2, false.B, predict_fail)
-    val re3_stall = dcache_miss_hazard
+    val re3_stall = dcache_miss_hazard || sb_full_hazard
     val re3_flush = predict_fail || !re3_stall && sb_cmt_hazard
         inst_ex3 := reg1(inst_rf3, re3_stall, re3_flush)
 
