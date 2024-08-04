@@ -26,6 +26,8 @@ class CSR_IO extends Bundle{
 
     // mmu
     val asid_global     = Output(UInt(10.W))
+    val plv_global      = Output(UInt(2.W))
+    val crmd_trans      = Output(UInt(6.W))
     val dmw0_global     = Output(UInt(32.W))
     val dmw1_global     = Output(UInt(32.W))
 
@@ -296,4 +298,6 @@ class CSR(timer_width: Int) extends Module{
     io.interrupt_vec := Mux(!crmd(2), 0.U(12.W), (estat(12, 11) & ecfg(12, 11)) ## (estat(9, 0) & ecfg(9, 0)))
     io.asid_global := asid(9, 0)
     io.llbit_global := llbctl(0)
+    io.plv_global := crmd(1, 0)
+    io.crmd_trans := crmd(8, 3)
 }
