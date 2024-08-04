@@ -200,7 +200,7 @@ class Icache extends Module{
     val s_idle :: s_miss :: s_refill :: s_wait :: Nil = Enum(4)
     val state                   = RegInit(s_idle)
     val inst_valid              = WireDefault(false.B)
-    val read_finish             = ShiftRegister(io.i_rlast && rready, 1)                // 从内存替换cache完成 ? rready有必要吗
+    val read_finish             = ShiftRegister(io.i_rlast && io.i_rready, 1)                // 从内存替换cache完成 ? rready有必要吗
 
     switch(state){
         is(s_idle){
