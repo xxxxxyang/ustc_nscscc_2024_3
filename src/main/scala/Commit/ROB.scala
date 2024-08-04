@@ -53,6 +53,7 @@ class ROB() extends Module{
         val arat            = Output(Vec(2, new ROB_to_ARAT))
         val full            = Output(Bool())
         val stall           = Input(Bool())
+        val interrupt_vec   = Output(UInt(12.W))
         // priv
         val ex = Input(new Bundle{
             val priv_vec       = Input(UInt(10.W))
@@ -102,7 +103,6 @@ class ROB() extends Module{
         val pc_cmt            = Output(Vec(2, UInt(32.W)))
         val inst_cmt          = Output(Vec(2, UInt(32.W)))
     })
-
     //rob表 2*(ROB_SIZE/2)
     val rob = RegInit(
         VecInit.fill(2)(
@@ -183,8 +183,8 @@ class ROB() extends Module{
         priv_ls_buf.valid := false.B
     }
     // commit: 将完成的指令退休
-    // TODO: empty处理 
     val commit_en  = Wire(Vec(2, Bool())) 
+    val interrupt = commit_en(0) && io.interrupt_vec.orR
     val col = Wire(Vec(2, Bool()))
     val row = Wire(Vec(2, UInt((ROB_W - 1).W)))
     col(0) := head(0)
@@ -194,7 +194,7 @@ class ROB() extends Module{
     val empty = VecInit.tabulate(2)(i => row(i) === tail)
     val commit_item = VecInit.tabulate(2)(i => rob(col(i))(row(i)))
     commit_en(0) := !empty(0) && commit_item(0).complete
-    commit_en(1) := !empty(1) && commit_item(1).complete && commit_en(0) && 
+    commit_en(1) := !empty(1) && commit_item(1).complete && commit_en(0) && !interrupt && 
         !(commit_item(0).is_br || commit_item(0).exception(7) || commit_item(0).is_priv_ls || commit_item(0).is_priv_wrt)
     val commit_num = PopCount(commit_en)
 
@@ -211,8 +211,9 @@ class ROB() extends Module{
     
     val update_item = Mux(commit_en(0), Mux(commit_en(1), commit_item(1), commit_item(0)), 0.U.asTypeOf(new ROB_Item))
     
-    val predict_fail_cmt = update_item.predict_fail || update_item.is_priv_wrt || update_item.is_priv_ls || update_item.exception(7);
-    val branch_target_cmt = Mux(update_item.exception(7),
+    val predict_fail_cmt = update_item.predict_fail || update_item.is_priv_wrt || update_item.is_priv_ls ||
+                           update_item.exception(7) || interrupt;
+    val branch_target_cmt = Mux(update_item.exception(7) || interrupt,
         Mux(update_item.exception(5, 0) === 0x3f.U, io.tlbrentry, io.eentry),
         Mux(update_item.is_priv_wrt && priv_buf.priv_vec(3) //ERTN
             || update_item.is_br && update_item.real_jump,
