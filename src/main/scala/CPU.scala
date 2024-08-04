@@ -140,6 +140,20 @@ class CPU extends Module {
         inst
     })
 
+    // simple-MMU-Icache
+    val dmw0_reg         = RegNext(csr.io.dmw0_global)
+    val dmw1_reg         = RegNext(csr.io.dmw1_global)
+    val i_vaddr          = pc.io.pc
+    val i_dmw0_hit = (!(i_vaddr(31, 29) ^ dmw0_reg(31, 29))) && dmw0_reg(3, 0)(csr.io.plv_global)
+    val i_dmw1_hit = (!(i_vaddr(31, 29) ^ dmw1_reg(31, 29))) && dmw1_reg(3, 0)(csr.io.plv_global)
+    val i_uncache_direct = (pc.io.pc(31,16) === "hbfaf".U) || (pc.io.pc(31,16) === "h1faf".U)
+    val i_uncache        = Mux(csr.io.crmd_trans(0), i_uncache_direct, 
+                            Mux(i_dmw0_hit, !dmw0_reg(4),
+                            Mux(i_dmw1_hit, !dmw1_reg(4), 0.U)))
+    val i_paddr          = Mux(csr.io.crmd_trans(0), i_vaddr, 
+                            Mux(i_dmw0_hit, dmw0_reg(27, 25) ## i_vaddr(28, 0), 
+                                            dmw1_reg(27, 25) ## i_vaddr(28, 0)))
+
     // PF-IF
     val insts_PF_IF = reg1(insts_PF,
         fq.io.full || icache_waiting, //pi stall
@@ -147,9 +161,9 @@ class CPU extends Module {
     // instruction fetch ------------------------
     icache.io.rvalid_IF  := !reset.asBool
     icache.io.addr_IF    := pc.io.pc
-    icache.io.paddr_IF   := pc.io.pc // todo: mmu
+    icache.io.paddr_IF   := i_paddr
     icache.io.exception  := reset.asUInt
-    icache.io.uncache_IF := (pc.io.pc(31,16) === "hbfaf".U) || (pc.io.pc(31,16) === "h1faf".U)
+    icache.io.uncache_IF := i_uncache
     icache.io.cacop_en   := reset.asBool
     icache.io.cacop_op   := reset.asUInt
     icache.io.stall      := fq.io.full
@@ -437,6 +451,20 @@ class CPU extends Module {
     sb.io.dcache_miss := dcache_miss_hazard 
     sb.io.em_stall := em_stall
 
+    // simple-MMU-Dcache
+    val plv_reg     = RegNext(csr.io.plv.global)
+    val da_reg      = RegNext(csr.io.crmd_trans(0))
+    val d_vaddr     = reg1(dcache.io.addr_EX, re3_stall)
+    val d_uncache_direct = (prj_data_ex3(31,16) === "hbfaf".U) || (prj_data_ex3(31,16) === "h1faf".U)
+    val d_dmw0_hit  = (!(d_vaddr(31, 29) ^ dmw0_reg(31, 29))) && dmw0_reg(3, 0)(plv_reg)
+    val d_dmw1_hit  = (!(d_vaddr(31, 29) ^ dmw1_reg(31, 29))) && dmw1_reg(3, 0)(plv_reg)
+    val d_paddr     = Mux(da_reg, d_vaddr,
+                    Mux(d_dmw0_hit, dmw0_reg(27, 25) ## d_vaddr(28, 0), 
+                                    dmw1_reg(27, 25) ## d_vaddr(28, 0)))
+    val d_uncache   = Mux(da_reg, d_uncache_direct, 
+                    Mux(d_dmw0_hit, !dmw0_reg(4),
+                    Mux(d_dmw1_hit, !dmw1_reg(4), 0.U)))
+
     //dcache
     dcache.io.addr_EX := Mux(sb.io.wb_valid, sb.io.addr_out, prj_data_rf3 + imm_rf3)
     dcache.io.wdata_EX := Mux(sb.io.wb_valid, sb.io.addr_out, prk_data_rf3)
@@ -444,9 +472,9 @@ class CPU extends Module {
     dcache.io.store_cmt_EX := sb.io.wb_valid
     dcache.io.cacop_en := Mux(sb.io.wb_valid, false.B, inst_rf3.priv_vec(10) && inst_rf3.imm(2,0) === 1.U)
     dcache.io.cacop_op := inst_rf3.imm(4,3)
-    dcache.io.uncache := (prj_data_ex3(31,16) === "hbfaf".U) || (prj_data_ex3(31,16) === "h1faf".U)
+    dcache.io.uncache := d_uncache
     dcache.io.rob_index_TC := inst_ex3.rob_index
-    dcache.io.paddr_TC := reg1(dcache.io.addr_EX, re3_stall)
+    dcache.io.paddr_TC := d_paddr
     dcache.io.exception := exception_mem
     dcache.io.rob_index_CMT := rob.io.rob_index_cmt
     dcache.io.d_rready := arb.io.d_rready
