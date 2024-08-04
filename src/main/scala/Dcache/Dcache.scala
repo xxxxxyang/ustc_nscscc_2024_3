@@ -172,7 +172,7 @@ class Dcache extends Module{
     val cmem_rdata_reg_TC_MEM    = RegInit(VecInit(Seq.fill(2)(0.U((8*OFFSET_DEPTH).W))))
     when(TC_MEM_en){
         paddr_reg_TC_MEM         := Mux(store_cmt_TC || flush_TC, addr_TC, paddr_TC)
-        mem_type_reg_TC_MEM      := Mux(mem_type_TC(2) || uncache_TC || store_cmt_TC, mem_type_TC, 0.U)
+        mem_type_reg_TC_MEM      := Mux(!mem_type_TC(2) || uncache_TC || store_cmt_TC, mem_type_TC, 0.U)
         wdata_reg_TC_MEM         := wdata_TC
         uncache_reg_TC_MEM       := uncache_TC
         hit_reg_TC_MEM           := hit_TC
@@ -256,7 +256,7 @@ class Dcache extends Module{
     val data_sel                = WireDefault(FROM_RBUF)
     val cmem_rdata_group        = VecInit.tabulate(OFFSET_DEPTH)(i => (0.U(32.W) ## cmem_rdata_MEM(hit_index_MEM))(8*i+31, 8*i))
     val rbuf_group              = VecInit.tabulate(OFFSET_DEPTH)(i => (0.U(32.W) ## ret_buf)(8*i+31, 8*i))
-    val rdata_temp              = Mux(data_sel === FROM_RBUF, rbuf_group(offset_MEM), cmem_rdata_group(offset_MEM))
+    val rdata_temp              = Mux(data_sel === FROM_RBUF, Mux(uncache_MEM, ret_buf(8*OFFSET_DEPTH-1, 8*OFFSET_DEPTH-32), rbuf_group(offset_MEM)), cmem_rdata_group(offset_MEM))
     val rmask                   = WireDefault(0.U(32.W))
     when(mem_type_MEM(1, 0) === 0.U){
         rmask                   := "h0000000f".U
