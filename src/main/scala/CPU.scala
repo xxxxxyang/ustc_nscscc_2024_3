@@ -439,7 +439,7 @@ class CPU extends Module {
 
     //dcache
     dcache.io.addr_EX := Mux(sb.io.wb_valid, sb.io.addr_out, prj_data_rf3 + imm_rf3)
-    dcache.io.wdata_EX := Mux(sb.io.wb_valid, sb.io.addr_out, prk_data_rf3)
+    dcache.io.wdata_EX := Mux(sb.io.wb_valid, sb.io.data_out, prk_data_rf3)
     dcache.io.mem_type_EX := Mux(sb.io.wb_valid, Mux(sb.io.uncache_out, 0.U, sb.io.mem_type_out), Mux(sb_full_hazard, 0.U, inst_rf3.mem_type))
     dcache.io.store_cmt_EX := sb.io.wb_valid
     dcache.io.cacop_en := Mux(sb.io.wb_valid, false.B, inst_rf3.priv_vec(10) && inst_rf3.imm(2,0) === 1.U)
