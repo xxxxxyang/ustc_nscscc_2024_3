@@ -562,6 +562,8 @@ class CPU extends Module {
     csr.io.llbit_clear:= rob.io.llbit_clear_cmt
     csr.io.llbit_set  := rob.io.llbit_set_cmt
 
+    rob.io.interrupt_vec := csr.io.interrupt_vec
+
     // arbiter
     arb.io.i_araddr                 := icache.io.i_araddr
     arb.io.i_rvalid                 := icache.io.i_rvalid
