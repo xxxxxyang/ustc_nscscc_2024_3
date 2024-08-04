@@ -452,7 +452,7 @@ class CPU extends Module {
     sb.io.em_stall := em_stall
 
     // simple-MMU-Dcache
-    val plv_reg     = RegNext(csr.io.plv.global)
+    val plv_reg     = RegNext(csr.io.plv_global)
     val da_reg      = RegNext(csr.io.crmd_trans(0))
     val d_vaddr     = reg1(dcache.io.addr_EX, re3_stall)
     val d_uncache_direct = (prj_data_ex3(31,16) === "hbfaf".U) || (prj_data_ex3(31,16) === "h1faf".U)
