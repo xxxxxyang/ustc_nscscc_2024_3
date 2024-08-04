@@ -34,5 +34,5 @@ class Bypass() extends Module {
 
     val hit_k = VecInit.tabulate(3)(j => (io.rd_valid_wb(j) && io.prd_wb(j) === io.prk_ex(3) && io.prd_wb(j).orR))
     io.forward_prk_en(3) :=  hit_k.asUInt.orR
-    io.forward_prk_data(3) := Mux1H(hit_j, io.prd_wdata_wb)
+    io.forward_prk_data(3) := Mux1H(hit_k, io.prd_wdata_wb)
 }

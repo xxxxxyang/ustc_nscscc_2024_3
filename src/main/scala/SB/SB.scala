@@ -81,7 +81,7 @@ class SB(n:Int) extends Module{
     io.uncache_out := sb(head).uncache
     io.wb_valid := wait_num.orR
 
-    //Read stage 1 grnerate control signals
+    /*//Read stage 1 grnerate control signals
     val ld_hit = RegInit(VecInit.fill(4)(VecInit.fill(n)(false.B)))
     val sb_rearrange_reg = RegInit(VecInit.fill(n)(0.U.asTypeOf(new sb_t)))
     val ld_mask = RegInit((UIntToOH(UIntToOH(io.mem_type_ex(1, 0))) - 1.U)(3, 0))
@@ -93,7 +93,7 @@ class SB(n:Int) extends Module{
         sb_rearrange_reg := sb_rearrange
     }
     when(!io.em_stall){
-        ld_hit_mask := Mux(io.mem_type_ex(4), 0xf.U, (15.U << UIntToOH(io.mem_type_ex(1, 0)))(3, 0))
+        ld_hit_mask := Mux(io.mem_type_ex(2), 0xf.U, (15.U << UIntToOH(io.mem_type_ex(1, 0)))(3, 0))
     }
     when(!io.em_stall){
         ld_mask := (UIntToOH(UIntToOH(io.mem_type_ex(1, 0))) - 1.U)(3, 0)
@@ -116,5 +116,26 @@ class SB(n:Int) extends Module{
     for(j <- 0 until 4){
         data_byte(j) := Mux(ld_hit(j).asUInt.orR && ld_mask(j), Mux1H(PriorityEncoderOH(ld_hit.asUInt), sb_rearrange_reg.map(_.data)) >> (addr_start_reg ## 0.U(3.W)), 0.U)
     }
-    io.ld_data_mem       := data_byte.asUInt
+    io.ld_data_mem       := data_byte.asUInt*/
+
+    val ld_addr_mem     = io.addr_ex
+    val ld_mask         = (UIntToOH(UIntToOH(io.mem_type_ex(1, 0))) - 1.U)(3, 0)
+    val sb_order        = VecInit.tabulate(n)(i => sb(tail-1.U-i.U))
+    val sb_order_reg    = ShiftRegister(sb_order, 1, !io.em_stall)
+    val ld_hit_data     = Wire(Vec(4, UInt(8.W)))
+    val ld_hit_mask     = ShiftRegister(Mux(io.mem_type_ex(2), 0xf.U, (15.U << UIntToOH(io.mem_type_ex(1, 0)))(3, 0)), 1, !io.em_stall)
+    
+    // check for each bit
+    val ld_hit_temp         = VecInit.tabulate(n)(j => !(sb_order(j).addr(31, 2) ^ ld_addr_mem(31, 2)))
+    for(i <- 0 until 4){
+        val addr_mem        = ld_addr_mem(31, 2) ## (ld_addr_mem(1, 0) + i.U(2.W))(1, 0)
+        val ld_hit          = VecInit.tabulate(n)(j => ld_hit_temp(j) && sb_order(j).wstrb(addr_mem(1, 0)))
+        val ld_bit_hit      = ld_hit.asUInt.orR && ld_mask(i)
+        val ld_hit_index    = ShiftRegister(PriorityEncoderOH(ld_hit.asUInt), 1, !io.em_stall)
+        val hit_byte        = Mux1H(ld_hit_index, sb_order_reg.map(_.data)) >> (ShiftRegister(addr_mem(1, 0), 1, !io.em_stall) ## 0.U(3.W))
+        ld_hit_data(i)      := Mux(ShiftRegister(ld_bit_hit, 1, !io.em_stall), hit_byte, 0.U)
+        io.ld_hit(i)        := ld_hit_mask(i) | ShiftRegister(ld_bit_hit, 1, !io.em_stall)
+    }
+
+    io.ld_data_mem       := ld_hit_data.asUInt
 }
