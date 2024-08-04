@@ -225,6 +225,7 @@ class Icache extends Module{
                     lru_hit_upd     := cache_hit
                     cache_miss_RM    := !cache_hit
                     inst_valid      := cache_hit
+                    cache_miss_RM   := !cache_hit
                 }
             }
         }
