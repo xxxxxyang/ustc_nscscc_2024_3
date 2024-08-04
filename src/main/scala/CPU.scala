@@ -322,7 +322,7 @@ class CPU extends Module {
     val inst_ex0 = reg1(inst_rf0, mdu.io.busy, predict_fail)
     val inst_ex1 = reg1(inst_rf1, false.B, predict_fail)
     val inst_ex2 = reg1(inst_rf2, false.B, predict_fail)
-    val re3_stall = dcache_miss_hazard || sb_full_hazard 
+    val re3_stall = dcache_miss_hazard
     val re3_flush = predict_fail || !re3_stall && sb_cmt_hazard
         inst_ex3 := reg1(inst_rf3, re3_stall, re3_flush)
 
@@ -426,7 +426,7 @@ class CPU extends Module {
     sb.io.mem_type_ex := Mux(re3_stall, 0.U, inst_ex3.mem_type & Fill(5,inst_ex3.inst_valid))
     sb.io.uncache_ex := (prj_data_ex3(31,16) === "hbfaf".U) || (prj_data_ex3(31,16) === "h1faf".U)
     sb.io.st_num := rob.io.store_num_cmt
-    sb.io.dcache_miss := dcache_miss_hazard
+    sb.io.dcache_miss := dcache_miss_hazard 
     sb.io.em_stall := em_stall
 
     //dcache
@@ -442,14 +442,14 @@ class CPU extends Module {
     dcache.io.exception := exception_mem
     dcache.io.rob_index_CMT := rob.io.rob_index_cmt
     dcache.io.d_rready := arb.io.d_rready
-    dcache.io.d_rlast := arb.io.d_rlast
-    dcache.io.d_rdata := arb.io.d_rdata
-    dcache.io.d_wready := arb.io.d_wready
-    dcache.io.d_bvalid := arb.io.d_bvalid
+    dcache.io.d_rlast := arb.io.rlast
+    dcache.io.d_rdata := arb.io.rdata
+    dcache.io.d_wready := arb.io.wready
+    dcache.io.d_bvalid := arb.io.bvalid
     dcache.io.stall := reset.asBool
     dcache.io.flush := predict_fail
 
-    val mem_rdata_raw = VecInit.tabulate(4)(i => Mux(sb.io.ld_hit(i), sb.io.ld_data_mem(i*8+7, i*8), dcache.io.rdata_MEM(i*8+7, i*8))).asUInt
+    val mem_rdata_raw = VecInit.tabulate(4)(i => Mux(sb.io.ld_hit(i) && !((prj_data_mem(31,16) === "hbfaf".U) || (prj_data_mem(31,16) === "h1faf".U)), sb.io.ld_data_mem(i*8+7, i*8), dcache.io.rdata_MEM(i*8+7, i*8))).asUInt
     val mem_rdata = MuxLookup(inst_mem.mem_type(3, 0), 0.U)(Seq(
                                                         0.U -> Fill(24, mem_rdata_raw(7)) ## mem_rdata_raw(7, 0),
                                                         1.U -> Fill(16, mem_rdata_raw(15)) ## mem_rdata_raw(15, 0),
