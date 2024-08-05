@@ -441,6 +441,16 @@ class CPU extends Module {
     val llbit_mem = reg1(csr.io.llbit_global, em_stall, em_flush)
     val exception_mem = reg1(exception_ls, em_stall, em_flush)
 
+    //store buffer
+    sb.io.flush := predict_fail
+    sb.io.addr_ex := prj_data_ex3
+    sb.io.st_data_ex := prk_data_ex3
+    sb.io.mem_type_ex := Mux(re3_stall, 0.U, inst_ex3.mem_type & Fill(5,inst_ex3.inst_valid))
+    sb.io.uncache_ex := (prj_data_ex3(31,16) === "hbfaf".U) || (prj_data_ex3(31,16) === "h1faf".U)
+    sb.io.st_num := rob.io.store_num_cmt
+    sb.io.dcache_miss := dcache_miss_hazard 
+    sb.io.em_stall := em_stall
+
     // simple-MMU-Dcache
     val plv_reg     = RegNext(csr.io.plv_global)
     val da_reg      = RegNext(csr.io.crmd_trans(0))
@@ -454,16 +464,6 @@ class CPU extends Module {
     val d_uncache   = Mux(da_reg, d_uncache_direct, 
                     Mux(d_dmw0_hit, !dmw0_reg(4),
                     Mux(d_dmw1_hit, !dmw1_reg(4), 0.U)))
-    //store buffer
-    sb.io.flush := predict_fail
-    sb.io.addr_ex := d_paddr
-    sb.io.st_data_ex := prk_data_ex3
-    sb.io.mem_type_ex := Mux(re3_stall, 0.U, inst_ex3.mem_type & Fill(5,inst_ex3.inst_valid))
-    sb.io.uncache_ex := d_uncache
-    sb.io.st_num := rob.io.store_num_cmt
-    sb.io.dcache_miss := dcache_miss_hazard 
-    sb.io.em_stall := em_stall
-
 
     //dcache
     dcache.io.addr_EX := Mux(sb.io.wb_valid, sb.io.addr_out, prj_data_rf3 + imm_rf3)
