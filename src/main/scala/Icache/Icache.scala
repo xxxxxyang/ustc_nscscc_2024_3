@@ -221,7 +221,7 @@ class Icache extends Module{
                 }.otherwise{
                     state           := Mux(cache_miss_RM, s_miss, s_idle)
                     data_sel        := FROM_CMEM
-                    addr_sel        := FROM_PIPE
+                    addr_sel        := Mux(stall, FROM_SEG, FROM_PIPE)
                     lru_hit_upd     := cache_hit
                     cache_miss_RM    := !cache_hit
                     inst_valid      := cache_hit
