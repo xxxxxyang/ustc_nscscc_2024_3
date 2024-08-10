@@ -83,6 +83,7 @@ class ROB() extends Module{
             val br_cnt        = Output(UInt(2.W))
         })
         // 更新 store buffer
+        val is_store_cmt      = Output(UInt(2.W))
         val store_num_cmt     = Output(UInt(2.W))
         // 执行特权指令/异常
         val csr_addr_cmt      = Output(UInt(14.W))
@@ -235,9 +236,11 @@ class ROB() extends Module{
     io.pred.br_cnt          := reg1(update_item.br_cnt)
 
     // 更新store buffer
-    val store_num_cmt = PopCount(VecInit.tabulate(2)(i => 
+    val is_store_cmt = VecInit.tabulate(2)(i => 
         commit_item(i).is_store && commit_en(i) && !commit_item(i).exception(7)
-        && !(commit_item(i).is_priv_ls && !reg1(io.llbit))))
+        && !(commit_item(i).is_priv_ls && !reg1(io.llbit)))
+    val store_num_cmt = PopCount(is_store_cmt)
+    io.is_store_cmt  := reg1(is_store_cmt.asUInt)
     io.store_num_cmt := reg1(store_num_cmt)
     
     // 更新csr
