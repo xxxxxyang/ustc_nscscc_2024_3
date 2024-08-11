@@ -52,6 +52,9 @@ class CPU extends Module {
         val commit_rf_wdata             = Output(Vec(2, UInt(32.W)))
         val commit_pc                   = Output(Vec(2, UInt(32.W)))
         val commit_inst                 = Output(Vec(2, UInt(32.W)))
+        val commit_csr_waddr            = Output(UInt(14.W))
+        val commit_cnt                  = Output(UInt(64.W))
+        val commit_csr_exception               = Output(UInt(8.W))
     })
     val arb = Module(new Arbiter_AXI)
     // PF 
@@ -220,7 +223,7 @@ class CPU extends Module {
     val inst_wb3   = Wire(new pack_DP)
 
     rename.io.wake_preg  := VecInit(Mux(inst_ex0_2.rd_valid, inst_ex0_2.prd, 0.U), iq1.io.to_wake, iq2.io.to_wake, Mux(inst_wb3.rd_valid, inst_wb3.prd, 0.U))
-    rename.io.wake_valid := VecInit(!mdu.io.busy, iq1.io.issue_valid, iq2.io.issue_valid, !dcache_miss_hazard)
+    rename.io.wake_valid := VecInit(!mdu.io.busy, iq1.io.issue_valid, iq2.io.issue_valid, true.B)
     
     val insts_RN = VecInit.tabulate(2)(i =>
         pack_RN(insts_ID_RN(i), rename.io.prj(i), rename.io.prk(i), rename.io.prd(i), rename.io.pprd(i)))
@@ -658,4 +661,7 @@ class CPU extends Module {
     io.commit_prd                   := rob.io.arat.map(_.prd)
     io.commit_rd_valid              := rob.io.arat.map(_.rd_valid)
     io.commit_rf_wdata              := rob.io.rf_wdata_cmt
+    io.commit_csr_waddr             := rob.io.csr_addr_cmt
+    io.commit_cnt                   := cnt.io.cnt
+    io.commit_csr_exception         := rob.io.exception_cmt
 }
