@@ -3,6 +3,8 @@ import chisel3.util._
 import exception_code._
 import CSR_CODE._
 import CSR_REG._
+import TLB_Config._
+import TLB_Struct._
 
 class CSR_IO extends Bundle{
     val raddr           = Input(UInt(14.W))
@@ -30,6 +32,18 @@ class CSR_IO extends Bundle{
     val crmd_trans      = Output(UInt(6.W))
     val dmw0_global     = Output(UInt(32.W))
     val dmw1_global     = Output(UInt(32.W))
+    val tlbehi_global    = Output(UInt(19.W))
+    val tlbidx_global   = Output(UInt(log2Ceil(TLB_ENTRY_NUM).W))
+
+    // tlbwr
+    val tlbentry_global = Output(new tlb_t)
+
+    // tlbrd
+    val tlbentry_in     = Input(new tlb_t)
+    val tlbrd_en        = Input(Bool())
+
+    // tlbsrch
+    val tlbsrch_en      = Input(Bool())
 
     // llbit
     val llbit_global    = Output(Bool())
@@ -43,7 +57,7 @@ class CSR_IO extends Bundle{
 
 
 
-class CSR(timer_width: Int) extends Module{
+class CSR(PALEN: 32, timer_width: Int) extends Module{
     val io = IO(new CSR_IO)
     val crmd = RegInit(8.U(32.W))
     val prmd = RegInit(0.U(32.W))
@@ -173,10 +187,50 @@ class CSR(timer_width: Int) extends Module{
     }
 
     //TLBIDX: TLB索引
+    when(io.tlbsrch_en){
+        when(io.wdata(TLB_IDX_WID) === 1.U){//hit
+            tlbidx := 0.U(1.W) ## tlbidx(30, TLB_IDX_WID) ## io.wdata(TLB_IDX_WID-1, 0)
+        }.otherwise{
+            tlbidx := 1.U(1.W) ## tlbidx(30, 0)
+        }
+    }.elsewhen(io.tlbrd_en){
+        tlbidx := !io.tlbentry_in.e ## 0.U(1.W) ## Mux(io.tlbentry_in.e, io.tlbentry_in.ps, 0.U(6.W)) ## tlbidx(23, 0)
+    }.elsewhen(io.we && io.waddr === CSR_TLBIDX){
+        tlbidx := io.wdata(31) ## 0.U(1.W) ## io.wdata(29, 24) ## 0.U((24-TLB_IDX_WID).W) ## io.wdata(TLB_IDX_WID-1, 0)
+    }
+    
+
     //TLBEHI: TLB表项高位
+    when(io.exception(7) && (is_tlbr || io.exception(6, 0) >= PIL && io.exception(6, 0) <= PPI)){
+        tlbehi := io.badv_exp(31, 13) ## 0.U(13.W)
+    }.elsewhen(io.tlbrd_en){
+        tlbehi := Mux(io.tlbentry_in.e, io.tlbentry_in.vppn ## 0.U(13.W), 0.U(32.W))
+    }.elsewhen(io.we && io.waddr === CSR_TLBEHI){
+        tlbehi := io.wdata(31, 13) ## 0.U(13.W)
+    }
+    
+
     //TLBELO0: TLB表项低位
+    when(io.tlbrd_en){
+        tlbelo0 := Mux(io.tlbentry_in.e, tlbelo0(31, PALEN-4) ## io.tlbentry_in.ppn0 ## 0.U(1.W) ## io.tlbentry_in.g ## io.tlbentry_in.mat0 ## io.tlbentry_in.plv0 ## io.tlbentry_in.d0 ## io.tlbentry_in.v0, 0.U(32.W))
+    }.elsewhen(io.we && io.waddr === CSR_TLBELO0){
+        tlbelo0:= 0.U((36-PALEN).W) ## io.wdata(PALEN-5, 8) ## 0.U(1.W) ## io.wdata(6, 0)
+    }
+
     //TLBELO1: TLB表项低位
+    when(io.tlbrd_en){
+        tlbelo1 := Mux(io.tlbentry_in.e, tlbelo1(31, PALEN-4) ## io.tlbentry_in.ppn1 ## 0.U(1.W) ## io.tlbentry_in.g ## io.tlbentry_in.mat1 ## io.tlbentry_in.plv1 ## io.tlbentry_in.d1 ## io.tlbentry_in.v1, 0.U(32.W))
+    }.elsewhen(io.we && io.waddr === CSR_TLBELO1){
+        tlbelo1:= 0.U((36-PALEN).W) ## io.wdata(PALEN-5, 8) ## 0.U(1.W) ## io.wdata(6, 0)
+    }
+
     //ASID: 地址空间标识符
+    when(io.tlbrd_en){
+        asid := asid(31, 10) ## Mux(io.tlbentry_in.e, io.tlbentry_in.asid, 0.U(10.W))
+    }.elsewhen(io.we && io.waddr === CSR_ASID){
+        asid := 0.U(22.W) ## io.wdata(9, 0)
+    }
+
     //PGDL: 低半地址空间全局目录基址
     when(io.we && io.waddr === CSR_PGDL){
         pgdl := io.wdata(31, 12) ## 0.U(12.W)
@@ -188,7 +242,15 @@ class CSR(timer_width: Int) extends Module{
     }
 
     //PGD: 全局目录基址
+    when(io.we && io.waddr === CSR_PGD){
+        pgd := io.wdata(31, 12) ## 0.U(12.W)
+    }
+
     //TLBENTRY: TLB重填例外入口地址
+    when(io.we && io.waddr === CSR_TLBRENTRY){
+        tlbrentry := io.wdata(31, 6) ## 0.U(6.W)
+    }
+
     //DMW0: 数据存储访问控制
     when(io.we && io.waddr === CSR_DMW0){
         dmw0 := io.wdata(31,29) ## 0.U(1.W) ## io.wdata(27,25) ## 0.U(19.W) ## io.wdata(5,3) ## 0.U(2.W) ## io.wdata(0)
@@ -424,6 +486,27 @@ class CSR(timer_width: Int) extends Module{
         io.csr_reg.tval := tval
     }
 
+    val tlb_entry = Wire(new tlb_t)
+    tlb_entry.vppn := tlbehi(31, 13)
+    tlb_entry.ps   := tlbidx(29, 24)
+    tlb_entry.g    := tlbelo0(6) && tlbelo1(6)
+    tlb_entry.asid := asid(9,0)
+    tlb_entry.e    := Mux(estat(21, 16) === 0x3f.U, true.B, !tlbidx(31))
+    tlb_entry.ppn0 := tlbelo0(PALEN-5, 8)
+    tlb_entry.mat0 := tlbelo0(5, 4)
+    tlb_entry.plv0 := tlbelo0(3, 2)
+    tlb_entry.d0   := tlbelo0(1)
+    tlb_entry.v0   := tlbelo0(0)
+    tlb_entry.ppn1 := tlbelo1(PALEN-5, 8)
+    tlb_entry.mat1 := tlbelo1(5, 4)
+    tlb_entry.plv1 := tlbelo1(3, 2)
+    tlb_entry.d1   := tlbelo1(1)
+    tlb_entry.v1   := tlbelo1(0)
+
+    io.tlbentry_global := tlb_entry
+    io.tlbidx_global := tlbidx(TLB_IDX_WID-1, 0)
+    io.tlbehi_global := tlbehi(31, 13)
+    io.asid_global := asid(9, 0)
     io.csr_reg.ticlr := ticlr
     io.eentry_global     := eentry
     io.tlbrentry_global  := tlbrentry
