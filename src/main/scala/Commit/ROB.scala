@@ -6,6 +6,7 @@ import java.{util => ju}
 import Configs._
 import Interfaces._
 import Util._
+import TLB_Struct._
 
 // ROB表项 见P323
 class ROB_Item() extends Bundle{
@@ -33,7 +34,7 @@ class Priv_Buf extends Bundle{
     val valid       = Bool()
     val priv_vec    = UInt(10.W)
     val csr_addr    = UInt(14.W)
-    val tlb_entry   = new TLB_Entry
+    val tlb_entry   = new tlb_t
     val inv_op      = UInt(5.W)
     val inv_vaddr   = UInt(32.W)
     val inv_asid    = UInt(10.W)
@@ -58,7 +59,7 @@ class ROB() extends Module{
         val ex = Input(new Bundle{
             val priv_vec       = Input(UInt(10.W))
             val csr_addr       = Input(UInt(14.W))
-            val tlb_entry      = Input(new TLB_Entry)
+            val tlb_entry      = Input(new tlb_t)
             val invtlb_op      = Input(UInt(5.W))
             val invtlb_vaddr   = Input(UInt(32.W))
             val invtlb_asid    = Input(UInt(10.W))
@@ -89,7 +90,7 @@ class ROB() extends Module{
         val csr_addr_cmt      = Output(UInt(14.W))
         val csr_wdata_cmt     = Output(UInt(32.W))
         val csr_we_cmt        = Output(Bool())
-        val tlb_entry_cmt     = Output(new TLB_Entry)
+        val tlb_entry_cmt     = Output(new tlb_t)
         val badv_cmt          = Output(UInt(32.W))
         val is_ertn_cmt       = Output(Bool())
         val idle_en_cmt       = Output(Bool())

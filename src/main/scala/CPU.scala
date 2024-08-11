@@ -6,6 +6,7 @@ import InstPacks._
 import Util._
 import control_signal._
 import CSR_REG._
+import TLB_Struct._
 
 class CPU extends Module {
     val io = IO(new Bundle{
@@ -384,7 +385,7 @@ class CPU extends Module {
 
     rob.io.ex.priv_vec      := inst_ex0.priv_vec(9, 0)
     rob.io.ex.csr_addr      := inst_ex0.imm(13, 0)
-    rob.io.ex.tlb_entry     := reset.asUInt.asTypeOf(new TLB_Entry) // todo: MMU
+    rob.io.ex.tlb_entry     := reset.asUInt.asTypeOf(new tlb_t) // todo: MMU
     rob.io.ex.invtlb_op     := inst_ex0.imm(4, 0)
     rob.io.ex.invtlb_asid   := prj_data_ex0(9, 0)
     rob.io.ex.invtlb_vaddr  := prk_data_ex0
