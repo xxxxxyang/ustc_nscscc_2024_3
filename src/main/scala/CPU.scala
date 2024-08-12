@@ -175,7 +175,7 @@ class CPU extends Module {
     icache.io.i_rlast    := arb.io.i_rlast
     val insts_IF = VecInit.tabulate(2)(i => {
         val inst_IF = pack_IF(insts_PF_IF(i), icache.io.inst(i))
-        inst_IF.exception := Mux(inst_IF.exception(7), inst_IF.exception, mmu.io.i_exception)
+        inst_IF.exception := Mux(insts_PF_IF(i).exception(7), insts_PF_IF(i).exception, mmu.io.i_exception)
         inst_IF
     })
     // IF-PD
@@ -596,6 +596,7 @@ class CPU extends Module {
     
     rob.io.interrupt_vec := csr.io.interrupt_vec
     
+    mmu.io.tlbwr_entry              := csr.io.tlbentry_global
     mmu.io.tlbwr_en                 := rob.io.tlbwr_en_cmt
     mmu.io.tlbfill_idx              := cnt.io.cnt(3, 0)
     mmu.io.tlbfill_en               := rob.io.tlbfill_en_cmt
