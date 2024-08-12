@@ -46,7 +46,7 @@ class xilinx_simple_dual_port_1_clock_ram_write_first(RAM_WIDTH: Int, RAM_DEPTH:
 |       ram_data <= BRAM[addrb];
 |       if (wea) begin
 |           BRAM[addra] <= dina;
-|           ram_data <= dina;
+|           if (addra == addrb) ram_data <= dina;
 |       end
 |   end
 |
