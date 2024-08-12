@@ -96,7 +96,17 @@ class ROB() extends Module{
         val idle_en_cmt       = Output(Bool())
         val llbit_set_cmt     = Output(Bool())
         val llbit_clear_cmt   = Output(Bool())
-        
+        //tlb
+        val tlbwr_en_cmt      = Output(Bool())
+        val tlbrd_en_cmt      = Output(Bool())
+        val tlbfill_en_cmt    = Output(Bool())
+        val tlbsrch_en_cmt    = Output(Bool())
+        val invtlb_en_cmt     = Output(Bool())
+        val invtlb_op_cmt     = Output(UInt(5.W))
+        val invtlb_vaddr_cmt  = Output(UInt(32.W))
+        val invtlb_asid_cmt   = Output(UInt(10.W))
+        val tlbentry_cmt      = Output(new tlb_t)
+
         val rob_index_cmt     = Output(UInt(PREG_W.W))
 
         //debug
@@ -254,6 +264,17 @@ class ROB() extends Module{
     io.idle_en_cmt   := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(9))
     io.llbit_set_cmt   := reg1(update_item.is_priv_ls && priv_ls_buf.priv_vec(1))
     io.llbit_clear_cmt := reg1(update_item.is_priv_ls && priv_ls_buf.priv_vec(2))
+    // tlb
+    io.tlbrd_en_cmt    := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(4))
+    io.tlbwr_en_cmt    := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(5))
+    io.tlbfill_en_cmt  := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(6))
+    io.tlbsrch_en_cmt  := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(7))
+    io.invtlb_en_cmt   := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(8))
+    
+    io.tlbentry_cmt    := reg1(priv_buf.tlb_entry)
+    io.invtlb_op_cmt   := reg1(priv_buf.inv_op)
+    io.invtlb_vaddr_cmt:= reg1(priv_buf.inv_vaddr)
+    io.invtlb_asid_cmt := reg1(priv_buf.inv_asid)
 
     io.rob_index_cmt := reg1(head)
 
