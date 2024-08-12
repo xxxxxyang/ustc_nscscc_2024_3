@@ -429,11 +429,53 @@ class CSR(PALEN: 32, timer_width: Int) extends Module{
         io.csr_reg.llbctl := llbctl
     }
 
-    io.csr_reg.tlbidx := tlbidx
-    io.csr_reg.tlbehi := tlbehi
-    io.csr_reg.tlbelo0 := tlbelo0
-    io.csr_reg.tlbelo1 := tlbelo1
-    io.csr_reg.asid := asid
+    when(io.tlbsrch_en){
+        when(io.wdata(TLB_IDX_WID) === 1.U){//hit
+            io.csr_reg.tlbidx := 0.U(1.W) ## tlbidx(30, TLB_IDX_WID) ## io.wdata(TLB_IDX_WID-1, 0)
+        }.otherwise{
+            io.csr_reg.tlbidx := 1.U(1.W) ## tlbidx(30, 0)
+        }
+    }.elsewhen(io.tlbrd_en){
+        io.csr_reg.tlbidx := !io.tlbentry_in.e ## 0.U(1.W) ## Mux(io.tlbentry_in.e, io.tlbentry_in.ps, 0.U(6.W)) ## tlbidx(23, 0)
+    }.elsewhen(io.we && io.waddr === CSR_TLBIDX){
+        io.csr_reg.tlbidx := io.wdata(31) ## 0.U(1.W) ## io.wdata(29, 24) ## 0.U((24-TLB_IDX_WID).W) ## io.wdata(TLB_IDX_WID-1, 0)
+    }.otherwise{
+        io.csr_reg.tlbidx := tlbidx
+    }
+
+    when(io.exception(7) && (is_tlbr || io.exception(6, 0) >= PIL && io.exception(6, 0) <= PPI)){
+        io.csr_reg.tlbehi := io.badv_exp(31, 13) ## 0.U(13.W)
+    }.elsewhen(io.tlbrd_en){
+        io.csr_reg.tlbehi := Mux(io.tlbentry_in.e, io.tlbentry_in.vppn ## 0.U(13.W), 0.U(32.W))
+    }.elsewhen(io.we && io.waddr === CSR_TLBEHI){
+        io.csr_reg.tlbehi := io.wdata(31, 13) ## 0.U(13.W)
+    }.otherwise{
+        io.csr_reg.tlbehi := tlbehi
+    }
+
+    when(io.tlbrd_en){
+        io.csr_reg.tlbelo0 := Mux(io.tlbentry_in.e, tlbelo0(31, PALEN-4) ## io.tlbentry_in.ppn0 ## 0.U(1.W) ## io.tlbentry_in.g ## io.tlbentry_in.mat0 ## io.tlbentry_in.plv0 ## io.tlbentry_in.d0 ## io.tlbentry_in.v0, 0.U(32.W))
+    }.elsewhen(io.we && io.waddr === CSR_TLBELO0){
+        io.csr_reg.tlbelo0:= 0.U((36-PALEN).W) ## io.wdata(PALEN-5, 8) ## 0.U(1.W) ## io.wdata(6, 0)
+    }.otherwise{
+        io.csr_reg.tlbelo0 := tlbelo0
+    }
+
+    when(io.tlbrd_en){
+        io.csr_reg.tlbelo1 := Mux(io.tlbentry_in.e, tlbelo1(31, PALEN-4) ## io.tlbentry_in.ppn1 ## 0.U(1.W) ## io.tlbentry_in.g ## io.tlbentry_in.mat1 ## io.tlbentry_in.plv1 ## io.tlbentry_in.d1 ## io.tlbentry_in.v1, 0.U(32.W))
+    }.elsewhen(io.we && io.waddr === CSR_TLBELO1){
+        io.csr_reg.tlbelo1:= 0.U((36-PALEN).W) ## io.wdata(PALEN-5, 8) ## 0.U(1.W) ## io.wdata(6, 0)
+    }.otherwise{
+        io.csr_reg.tlbelo1 := tlbelo1
+    }
+
+    when(io.tlbrd_en){
+        io.csr_reg.asid := asid(31, 10) ## Mux(io.tlbentry_in.e, io.tlbentry_in.asid, 0.U(10.W))
+    }.elsewhen(io.we && io.waddr === CSR_ASID){
+        io.csr_reg.asid := 0.U(22.W) ## io.wdata(9, 0)
+    }.otherwise{
+        io.csr_reg.asid := asid
+    }
 
     when(io.we && io.waddr === CSR_PGDL){
         io.csr_reg.pgdl := io.wdata(31, 12) ## 0.U(12.W)
@@ -447,8 +489,17 @@ class CSR(PALEN: 32, timer_width: Int) extends Module{
         io.csr_reg.pgdh := pgdh
     }
 
-    io.csr_reg.pgd := pgd
-    io.csr_reg.tlbrentry := tlbrentry
+    when(io.we && io.waddr === CSR_PGD){
+        io.csr_reg.pgd := io.wdata(31, 12) ## 0.U(12.W)
+    }.otherwise{
+        io.csr_reg.pgd := pgd
+    }
+
+    when(io.we && io.waddr === CSR_TLBRENTRY){
+        io.csr_reg.tlbrentry := io.wdata(31, 6) ## 0.U(6.W)
+    }.otherwise{
+        io.csr_reg.tlbrentry := tlbrentry
+    }
 
     when(io.we && io.waddr === CSR_DMW0){
         io.csr_reg.dmw0 := io.wdata(31,29) ## 0.U(1.W) ## io.wdata(27,25) ## 0.U(19.W) ## io.wdata(5,3) ## 0.U(2.W) ## io.wdata(0)
