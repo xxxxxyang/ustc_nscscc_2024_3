@@ -68,7 +68,7 @@ class Dcache extends Module{
     val index_EX                = addr_EX(OFFSET_WIDTH + INDEX_WIDTH - 1, OFFSET_WIDTH)
 
     /* BRAM create */
-    val tag_BRAM                = VecInit.fill(2)(Module(new xilinx_simple_dual_port_1_clock_ram_no_change(TAG_WIDTH+1, INDEX_DEPTH)).io)
+    val tag_BRAM                = VecInit.fill(2)(Module(new xilinx_simple_dual_port_1_clock_ram_write_first(TAG_WIDTH+1, INDEX_DEPTH)).io)
     val cmem                    = VecInit.fill(2)(Module(new xilinx_simple_dual_port_byte_write_1_clock_ram_read_first(OFFSET_DEPTH, 8, INDEX_DEPTH)).io)
 
     // EX-TC SegReg
@@ -327,7 +327,7 @@ class Dcache extends Module{
     val wrt_finish                  = WireDefault(false.B)
 
     val d_rvalid                    = WireDefault(false.B)
-    val s_idle :: s_miss :: s_refill :: s_waitfill :: s_wait :: s_hold :: Nil = Enum(6)
+    val s_idle :: s_miss :: s_refill :: s_wait :: s_hold :: Nil = Enum(5)
     val state = RegInit(s_idle)
 
     switch(state){
@@ -365,7 +365,7 @@ class Dcache extends Module{
         }
         is(s_refill){
             val tag_idx             = Mux(cacop_en_MEM, cacop_way_MEM, lru_sel)
-            state                   := s_waitfill
+            state                   := s_wait
             cache_miss_MEM          := true.B
             lru_miss_upd            := !cacop_en_MEM
             tag_we(tag_idx)         := true.B
@@ -373,11 +373,6 @@ class Dcache extends Module{
             dirty_clean             := is_load_MEM || cacop_en_MEM
             dirty_we                := is_store_MEM
             addr_sel                := FROM_SEG
-        }
-        is(s_waitfill){
-            addr_sel                := Mux(wrt_finish, FROM_PIPE, FROM_SEG)
-            state                   := s_wait
-            cache_miss_MEM          := !wrt_finish
         }
         is(s_wait){
             addr_sel                := Mux(wrt_finish, FROM_PIPE, FROM_SEG)
