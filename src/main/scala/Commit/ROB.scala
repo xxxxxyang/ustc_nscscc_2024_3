@@ -6,6 +6,7 @@ import java.{util => ju}
 import Configs._
 import Interfaces._
 import Util._
+import TLB_Struct._
 
 // ROB表项 见P323
 class ROB_Item() extends Bundle{
@@ -33,7 +34,7 @@ class Priv_Buf extends Bundle{
     val valid       = Bool()
     val priv_vec    = UInt(10.W)
     val csr_addr    = UInt(14.W)
-    val tlb_entry   = new TLB_Entry
+    val tlb_entry   = new tlb_t
     val inv_op      = UInt(5.W)
     val inv_vaddr   = UInt(32.W)
     val inv_asid    = UInt(10.W)
@@ -58,7 +59,7 @@ class ROB() extends Module{
         val ex = Input(new Bundle{
             val priv_vec       = Input(UInt(10.W))
             val csr_addr       = Input(UInt(14.W))
-            val tlb_entry      = Input(new TLB_Entry)
+            val tlb_entry      = Input(new tlb_t)
             val invtlb_op      = Input(UInt(5.W))
             val invtlb_vaddr   = Input(UInt(32.W))
             val invtlb_asid    = Input(UInt(10.W))
@@ -83,18 +84,29 @@ class ROB() extends Module{
             val br_cnt        = Output(UInt(2.W))
         })
         // 更新 store buffer
+        val is_store_cmt      = Output(UInt(2.W))
         val store_num_cmt     = Output(UInt(2.W))
         // 执行特权指令/异常
         val csr_addr_cmt      = Output(UInt(14.W))
         val csr_wdata_cmt     = Output(UInt(32.W))
         val csr_we_cmt        = Output(Bool())
-        val tlb_entry_cmt     = Output(new TLB_Entry)
+        val tlb_entry_cmt     = Output(new tlb_t)
         val badv_cmt          = Output(UInt(32.W))
         val is_ertn_cmt       = Output(Bool())
         val idle_en_cmt       = Output(Bool())
         val llbit_set_cmt     = Output(Bool())
         val llbit_clear_cmt   = Output(Bool())
-        
+        //tlb
+        val tlbwr_en_cmt      = Output(Bool())
+        val tlbrd_en_cmt      = Output(Bool())
+        val tlbfill_en_cmt    = Output(Bool())
+        val tlbsrch_en_cmt    = Output(Bool())
+        val invtlb_en_cmt     = Output(Bool())
+        val invtlb_op_cmt     = Output(UInt(5.W))
+        val invtlb_vaddr_cmt  = Output(UInt(32.W))
+        val invtlb_asid_cmt   = Output(UInt(10.W))
+        val tlbentry_cmt      = Output(new tlb_t)
+
         val rob_index_cmt     = Output(UInt(PREG_W.W))
 
         //debug
@@ -235,9 +247,11 @@ class ROB() extends Module{
     io.pred.br_cnt          := reg1(update_item.br_cnt)
 
     // 更新store buffer
-    val store_num_cmt = PopCount(VecInit.tabulate(2)(i => 
+    val is_store_cmt = VecInit.tabulate(2)(i => 
         commit_item(i).is_store && commit_en(i) && !commit_item(i).exception(7)
-        && !(commit_item(i).is_priv_ls && !reg1(io.llbit))))
+        && !(commit_item(i).is_priv_ls && !reg1(io.llbit)))
+    val store_num_cmt = PopCount(is_store_cmt)
+    io.is_store_cmt  := reg1(is_store_cmt.asUInt)
     io.store_num_cmt := reg1(store_num_cmt)
     
     // 更新csr
@@ -250,6 +264,17 @@ class ROB() extends Module{
     io.idle_en_cmt   := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(9))
     io.llbit_set_cmt   := reg1(update_item.is_priv_ls && priv_ls_buf.priv_vec(1))
     io.llbit_clear_cmt := reg1(update_item.is_priv_ls && priv_ls_buf.priv_vec(2))
+    // tlb
+    io.tlbrd_en_cmt    := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(4))
+    io.tlbwr_en_cmt    := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(5))
+    io.tlbfill_en_cmt  := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(6))
+    io.tlbsrch_en_cmt  := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(7))
+    io.invtlb_en_cmt   := reg1(update_item.is_priv_wrt && priv_buf.priv_vec(8))
+    
+    io.tlbentry_cmt    := reg1(priv_buf.tlb_entry)
+    io.invtlb_op_cmt   := reg1(priv_buf.inv_op)
+    io.invtlb_vaddr_cmt:= reg1(priv_buf.inv_vaddr)
+    io.invtlb_asid_cmt := reg1(priv_buf.inv_asid)
 
     io.rob_index_cmt := reg1(head)
 

@@ -43,3 +43,8 @@ object exception_code{
     val FPE     = 0x12.U(7.W) // floating point exception
     val TLBR    = 0x3F.U(7.W) // TLB refill
 }
+
+object TLB_Config {
+    val TLB_ENTRY_NUM = 16
+    val TLB_IDX_WID   = log2Ceil(TLB_ENTRY_NUM)
+}

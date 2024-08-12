@@ -262,7 +262,7 @@ class Dcache extends Module{
     val rdata_temp              = Mux(data_sel === FROM_RBUF, Mux(uncache_MEM, ret_buf(8*OFFSET_DEPTH-1, 8*OFFSET_DEPTH-32), rbuf_group(offset_MEM)), cmem_rdata_group(offset_MEM))
     val rmask                   = WireDefault(0.U(32.W))
     when(mem_type_MEM(1, 0) === 0.U){
-        rmask                   := "h0000000f".U
+        rmask                   := "h000000ff".U
     }.elsewhen(mem_type_MEM(1, 0) === 1.U){
         rmask                   := "h0000ffff".U
     }.elsewhen(mem_type_MEM(1, 0) === 2.U){
