@@ -184,6 +184,9 @@ class Dcache extends Module{
     when(TC_MEM_en || flush){
         flush_reg_TC_MEM         := Mux(flush, flush, flush_TC)
     }
+    // when(!stall){
+    //     hit_reg_TC_MEM          := hit_TC
+    // }
     // paddr_reg_TC_MEM             := ShiftRegister(Mux(store_cmt_TC || flush_TC, addr_TC, paddr_TC), 1, TC_MEM_en)
     // mem_type_reg_TC_MEM          := ShiftRegister(Mux(mem_type_TC(2) || uncache_TC || store_cmt_TC, mem_type_TC, 0.U), 1, TC_MEM_en)
     // wdata_reg_TC_MEM             := ShiftRegister(wdata_TC, 1, TC_MEM_en)
@@ -324,7 +327,7 @@ class Dcache extends Module{
     val wrt_finish                  = WireDefault(false.B)
 
     val d_rvalid                    = WireDefault(false.B)
-    val s_idle :: s_miss :: s_refill :: s_wait :: s_hold :: Nil = Enum(5)
+    val s_idle :: s_miss :: s_refill :: s_waitfill :: s_wait :: s_hold :: Nil = Enum(6)
     val state = RegInit(s_idle)
 
     switch(state){
@@ -347,7 +350,7 @@ class Dcache extends Module{
                     lru_hit_upd                     := cache_hit_MEM
                     data_sel                        := FROM_CMEM
                     cmem_we(hit_index_MEM)       := Mux(is_store_MEM && cache_hit_MEM, wmask_byte, 0.U)
-                    dirty_we                        := is_store_MEM
+                    dirty_we                        := is_store_MEM && cache_hit_MEM
                     wbuf_we                         := !cache_hit_MEM
                     wfsm_en                         := !cache_hit_MEM
                     addr_sel                        := FROM_PIPE
@@ -362,7 +365,7 @@ class Dcache extends Module{
         }
         is(s_refill){
             val tag_idx             = Mux(cacop_en_MEM, cacop_way_MEM, lru_sel)
-            state                   := s_wait
+            state                   := s_waitfill
             cache_miss_MEM          := true.B
             lru_miss_upd            := !cacop_en_MEM
             tag_we(tag_idx)         := true.B
@@ -370,6 +373,11 @@ class Dcache extends Module{
             dirty_clean             := is_load_MEM || cacop_en_MEM
             dirty_we                := is_store_MEM
             addr_sel                := FROM_SEG
+        }
+        is(s_waitfill){
+            addr_sel                := Mux(wrt_finish, FROM_PIPE, FROM_SEG)
+            state                   := s_wait
+            cache_miss_MEM          := !wrt_finish
         }
         is(s_wait){
             addr_sel                := Mux(wrt_finish, FROM_PIPE, FROM_SEG)
