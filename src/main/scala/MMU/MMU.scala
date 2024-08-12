@@ -56,7 +56,28 @@ class MMU extends Module{
     val io = IO(new MMU_IO)
     val tlb = Module(new TLB)
 
-    io <> tlb.io
+    tlb.io.csr_asid       := io.csr_asid
+    tlb.io.csr_plv        := io.csr_plv
+    tlb.io.csr_tlbehi     := io.csr_tlbehi
+    io.tlbsrch_idx        := tlb.io.tlbsrch_idx
+    io.tlbsrch_hit        := tlb.io.tlbsrch_hit
+    tlb.io.csr_tlbidx     := io.csr_tlbidx
+    io.tlbrd_entry        := tlb.io.tlbrd_entry
+    tlb.io.tlbwr_entry    := io.tlbwr_entry
+    tlb.io.tlbwr_en       := io.tlbwr_en
+    tlb.io.tlbfill_idx    := io.tlbfill_idx
+    tlb.io.tlbfill_en     := io.tlbfill_en
+    tlb.io.invtlb_en      := io.invtlb_en
+    tlb.io.invtlb_op      := io.invtlb_op
+    tlb.io.invtlb_asid    := io.invtlb_asid
+    tlb.io.invtlb_vaddr   := io.invtlb_vaddr
+    tlb.io.i_valid        := io.i_valid
+    tlb.io.i_vaddr        := io.i_vaddr
+    tlb.io.i_stall        := io.i_stall
+    tlb.io.d_rvalid       := io.d_rvalid
+    tlb.io.d_wvalid       := io.d_wvalid
+    tlb.io.d_vaddr        := io.d_vaddr
+    tlb.io.d_stall        := io.d_stall
 
     // for icache
     val dmw0_reg          = RegNext(io.csr_dmw0)
