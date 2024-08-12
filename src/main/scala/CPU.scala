@@ -79,7 +79,7 @@ class CPU extends Module {
     val iq3 = Module(new IssueQueue(IQ_SIZE(3), true))
     // RF
     val rf = Module(new RegFile)
-    val csr = Module(new CSR(32, 30))
+    val csr = Module(new CSR(30))
     // EX
     val mdu = Module(new MDU)
 
@@ -89,7 +89,6 @@ class CPU extends Module {
     val alu2 = Module(new ALU)
     val br   = Module(new Branch)
 
-    val mmu  = Module(new MMU)
     val dcache = Module(new Dcache)
     val sb = Module(new SB(SB_NUM))
     // WB
@@ -145,17 +144,19 @@ class CPU extends Module {
         inst
     })
 
-    mmu.io.csr_asid       := csr.io.asid_global
-    mmu.io.csr_plv        := csr.io.plv_global
-    mmu.io.csr_tlbehi     := csr.io.tlbehi_global
-    mmu.io.csr_tlbidx     := csr.io.tlbidx_global
-    mmu.io.csr_dmw0       := csr.io.dmw0_global
-    mmu.io.csr_dmw1       := csr.io.dmw1_global
-    mmu.io.csr_crmd_trans := csr.io.crmd_trans
-    // MMU for Icache
-    mmu.io.i_vaddr := pc.io.pc
-    mmu.io.i_valid := icache.io.rvalid_IF
-    mmu.io.i_stall := fq.io.full || icache_waiting
+    // simple-MMU-Icache
+    val dmw0_reg         = RegNext(csr.io.dmw0_global)
+    val dmw1_reg         = RegNext(csr.io.dmw1_global)
+    val i_vaddr          = pc.io.pc
+    val i_dmw0_hit = (!(i_vaddr(31, 29) ^ dmw0_reg(31, 29))) && dmw0_reg(3, 0)(csr.io.plv_global)
+    val i_dmw1_hit = (!(i_vaddr(31, 29) ^ dmw1_reg(31, 29))) && dmw1_reg(3, 0)(csr.io.plv_global)
+    val i_uncache_direct = (pc.io.pc(31,16) === "hbfaf".U) || (pc.io.pc(31,16) === "h1faf".U)
+    val i_uncache        = Mux(csr.io.crmd_trans(0), i_uncache_direct, 
+                            Mux(i_dmw0_hit, !dmw0_reg(4),
+                            Mux(i_dmw1_hit, !dmw1_reg(4), 0.U)))
+    val i_paddr          = Mux(csr.io.crmd_trans(0), i_vaddr, 
+                            Mux(i_dmw0_hit, dmw0_reg(27, 25) ## i_vaddr(28, 0), 
+                                            dmw1_reg(27, 25) ## i_vaddr(28, 0)))
 
     // PF-IF
     val insts_PF_IF = reg1(insts_PF,
@@ -164,20 +165,18 @@ class CPU extends Module {
     // instruction fetch ------------------------
     icache.io.rvalid_IF  := !reset.asBool
     icache.io.addr_IF    := pc.io.pc
-    icache.io.paddr_IF   := mmu.io.i_paddr
-    icache.io.exception  := mmu.io.i_exception(7)
-    icache.io.uncache_IF := mmu.io.i_uncache
+    icache.io.paddr_IF   := i_paddr
+    icache.io.exception  := reset.asUInt
+    icache.io.uncache_IF := i_uncache
     icache.io.cacop_en   := reset.asBool
     icache.io.cacop_op   := reset.asUInt
     icache.io.stall      := fq.io.full
     icache.io.i_rready   := arb.io.i_rready
     icache.io.i_rdata    := arb.io.i_rdata
     icache.io.i_rlast    := arb.io.i_rlast
-    val insts_IF = VecInit.tabulate(2)(i => {
-        val inst_IF = pack_IF(insts_PF_IF(i), icache.io.inst(i))
-        inst_IF.exception := Mux(insts_PF_IF(i).exception(7), insts_PF_IF(i).exception, mmu.io.i_exception)
-        inst_IF
-    })
+    val insts_IF = VecInit.tabulate(2)(i =>
+        pack_IF(insts_PF_IF(i), icache.io.inst(i)))
+
     // IF-PD
     val insts_IF_PD = reg1(insts_IF,
         fq.io.full, //ip stall
@@ -391,13 +390,11 @@ class CPU extends Module {
     rob.io.ex.invtlb_asid   := prj_data_ex0(9, 0)
     rob.io.ex.invtlb_vaddr  := prk_data_ex0
     
-    val csr_wdata_ex = Mux(inst_ex0.priv_vec(7), 
-        mmu.io.tlbsrch_hit ## mmu.io.tlbsrch_idx, //TLBSRCH
-        Mux(inst_ex0.priv_vec(3), csr_rdata_ex, //ERTN
+    //todo: tlbsrch
+    val csr_wdata_ex = Mux(inst_ex0.priv_vec(3), csr_rdata_ex, //ERTN
         Mux(inst_ex0.priv_vec(2), 
             prj_data_ex0 & prk_data_ex0 | ~prj_data_ex0 & csr_rdata_ex, //CSRXCHG
             prk_data_ex0)) //CSRWR
-    )
 
     val inst_ex0_1     = reg1(inst_ex0,       mdu.io.busy, predict_fail)
         inst_ex0_2    := reg1(inst_ex0_1,     mdu.io.busy, predict_fail)
@@ -437,8 +434,7 @@ class CPU extends Module {
     val addr_mask = (1.U(4.W) << inst_ex3.mem_type(1, 0)) - 1.U
     val Is_ALE = Wire(UInt(8.W))
     Is_ALE := Mux((prj_data_ex3 & addr_mask) =/= 0.U, 1.U(1.W) ## 0x09.U(7.W), 0.U(8.W))
-    val exception_ls = Mux((inst_ex3.priv_vec(10) && inst_ex3.imm(4, 3) =/= 2.U || inst_ex3.priv_vec(12) && !csr.io.llbit_global),
-        0.U, Mux(Is_ALE(7), Is_ALE, mmu.io.d_exception))
+    val exception_ls = Mux((inst_ex3.priv_vec(10) && inst_ex3.imm(4, 3) =/= 2.U || inst_ex3.priv_vec(12) && !csr.io.llbit_global), 0.U, Is_ALE)
 
     //EX-MEM Reg
     val em_stall = dcache_miss_hazard
@@ -451,20 +447,28 @@ class CPU extends Module {
 
     //store buffer
     sb.io.flush := predict_fail
-    sb.io.addr_ex := mmu.io.d_paddr
+    sb.io.addr_ex := prj_data_ex3
     sb.io.st_data_ex := prk_data_ex3
     sb.io.mem_type_ex := Mux(re3_stall, 0.U, inst_ex3.mem_type & Fill(5,inst_ex3.inst_valid))
-    sb.io.uncache_ex := mmu.io.d_uncache
+    sb.io.uncache_ex := (prj_data_ex3(31,16) === "hbfaf".U) || (prj_data_ex3(31,16) === "h1faf".U)
     sb.io.st_num := rob.io.store_num_cmt
     sb.io.dcache_miss := dcache_miss_hazard 
     sb.io.em_stall := em_stall
 
-    // MMU for Dcache
-    mmu.io.d_vaddr    := prj_data_rf3 + imm_rf3
-    mmu.io.d_rvalid   := inst_rf3.mem_type(4) & ~inst_rf3.mem_type(2)
-    mmu.io.d_wvalid   := inst_rf3.mem_type(2)
-    mmu.io.d_stall    := re3_stall
-    
+    // simple-MMU-Dcache
+    val plv_reg     = RegNext(csr.io.plv_global)
+    val da_reg      = RegNext(csr.io.crmd_trans(0))
+    val d_vaddr     = reg1(dcache.io.addr_EX, re3_stall)
+    val d_uncache_direct = (d_vaddr(31,16) === "hbfaf".U) || (d_vaddr(31,16) === "h1faf".U)
+    val d_dmw0_hit  = (!(d_vaddr(31, 29) ^ dmw0_reg(31, 29))) && dmw0_reg(3, 0)(plv_reg)
+    val d_dmw1_hit  = (!(d_vaddr(31, 29) ^ dmw1_reg(31, 29))) && dmw1_reg(3, 0)(plv_reg)
+    val d_paddr     = Mux(da_reg, d_vaddr,
+                    Mux(d_dmw0_hit, dmw0_reg(27, 25) ## d_vaddr(28, 0), 
+                                    dmw1_reg(27, 25) ## d_vaddr(28, 0)))
+    val d_uncache   = Mux(da_reg, d_uncache_direct, 
+                    Mux(d_dmw0_hit, !dmw0_reg(4),
+                    Mux(d_dmw1_hit, !dmw1_reg(4), 0.U)))
+
     //dcache
     dcache.io.addr_EX := Mux(sb.io.wb_valid, sb.io.addr_out, prj_data_rf3 + imm_rf3)
     dcache.io.wdata_EX := Mux(sb.io.wb_valid, sb.io.data_out, prk_data_rf3)
@@ -472,9 +476,9 @@ class CPU extends Module {
     dcache.io.store_cmt_EX := sb.io.wb_valid
     dcache.io.cacop_en := Mux(sb.io.wb_valid, false.B, inst_rf3.priv_vec(10) && inst_rf3.imm(2,0) === 1.U)
     dcache.io.cacop_op := inst_rf3.imm(4,3)
-    dcache.io.uncache := mmu.io.d_uncache
+    dcache.io.uncache := d_uncache
     dcache.io.rob_index_TC := inst_ex3.rob_index
-    dcache.io.paddr_TC := mmu.io.d_paddr
+    dcache.io.paddr_TC := d_paddr
     dcache.io.exception := exception_mem
     dcache.io.rob_index_CMT := rob.io.rob_index_cmt
     dcache.io.d_rready := arb.io.d_rready
@@ -590,20 +594,8 @@ class CPU extends Module {
     csr.io.llbit_clear:= rob.io.llbit_clear_cmt
     csr.io.llbit_set  := rob.io.llbit_set_cmt
 
-    csr.io.tlbentry_in := rob.io.tlbentry_cmt
-    csr.io.tlbrd_en    := rob.io.tlbrd_en_cmt
-    csr.io.tlbsrch_en  := rob.io.tlbsrch_en_cmt
-    
     rob.io.interrupt_vec := csr.io.interrupt_vec
-    
-    mmu.io.tlbwr_en                 := rob.io.tlbwr_en_cmt
-    mmu.io.tlbwr_entry              := csr.io.tlbentry_global
-    mmu.io.tlbfill_idx              := cnt.io.cnt(3, 0)
-    mmu.io.tlbfill_en               := rob.io.tlbfill_en_cmt
-    mmu.io.invtlb_en                := rob.io.invtlb_en_cmt
-    mmu.io.invtlb_op                := rob.io.invtlb_op_cmt
-    mmu.io.invtlb_asid              := rob.io.invtlb_asid_cmt
-    mmu.io.invtlb_vaddr             := rob.io.invtlb_vaddr_cmt
+
     // arbiter
     arb.io.i_araddr                 := icache.io.i_araddr
     arb.io.i_rvalid                 := icache.io.i_rvalid
