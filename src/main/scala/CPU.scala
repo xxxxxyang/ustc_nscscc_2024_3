@@ -596,8 +596,8 @@ class CPU extends Module {
     
     rob.io.interrupt_vec := csr.io.interrupt_vec
     
-    mmu.io.tlbwr_entry              := csr.io.tlbentry_global
     mmu.io.tlbwr_en                 := rob.io.tlbwr_en_cmt
+    mmu.io.tlbwr_entry              := csr.io.tlbentry_global
     mmu.io.tlbfill_idx              := cnt.io.cnt(3, 0)
     mmu.io.tlbfill_en               := rob.io.tlbfill_en_cmt
     mmu.io.invtlb_en                := rob.io.invtlb_en_cmt
