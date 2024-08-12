@@ -3,6 +3,7 @@ import chisel3.util._
 import exception_code._
 import TLB_Config._
 import TLB_Struct._
+import Util.reg1
 
 class TLB_IO extends Bundle {
     // from csr
@@ -73,17 +74,17 @@ class TLB extends Module{
                           Cat(i_tlb_hit_entry.ppn, io.i_vaddr(11, 0)),
                           Cat(i_tlb_hit_entry.ppn(19, 9), io.i_vaddr(20, 0)))
     
-    val i_tlb_hit_reg       = ShiftRegister(i_tlb_hit, 1, !io.i_stall)
-    val i_tlb_hit_entry_reg = ShiftRegister(i_tlb_hit_entry, 1, !io.i_stall)
-    val i_csr_plv_reg       = ShiftRegister(io.csr_plv, 1, !io.i_stall)
-    val i_valid_reg         = ShiftRegister(io.i_valid, 1, !io.i_stall)
+    val i_tlb_hit_reg       = reg1(i_tlb_hit, io.i_stall)
+    val i_tlb_hit_entry_reg = reg1(i_tlb_hit_entry, io.i_stall)
+    val i_csr_plv_reg       = reg1(io.csr_plv, io.i_stall)
+    val i_valid_reg         = reg1(io.i_valid, io.i_stall)
     io.i_tlb_exception     := Signal_Exception(i_tlb_hit_reg.asUInt.orR, i_tlb_hit_entry_reg, i_csr_plv_reg, i_valid_reg, false.B, false.B)
     
     // for dcache
     val d_tlb_hit       = WireDefault(VecInit.fill(TLB_ENTRY_NUM)(false.B))
-    val d_tlb_entry     = Mux1H(ShiftRegister(d_tlb_hit, 1, !io.d_stall), d_tlb)
+    val d_tlb_entry     = Mux1H(reg1(d_tlb_hit, io.d_stall), d_tlb)
     val d_tlb_hit_entry = TLB_Hit_Gen(d_tlb_entry, Mux(d_tlb_entry.ps(3), 
-                        ShiftRegister(io.d_vaddr(12), 1, !io.d_stall), ShiftRegister(io.d_vaddr(21), 1, !io.d_stall)))
+                        reg1(io.d_vaddr(12), io.d_stall), reg1(io.d_vaddr(21), io.d_stall)))
 
     for(i <- 0 until TLB_ENTRY_NUM){
         val d_tlb_vppn  = Mux(d_tlb(i).ps(3), d_tlb(i).vppn, d_tlb(i).vppn(18, 10) ## 0.U(10.W))
@@ -93,14 +94,14 @@ class TLB extends Module{
     }
     io.d_tlb_uncache   := d_tlb_hit_entry.mat(0)
     io.d_tlb_paddr     := Mux(d_tlb_hit_entry.ps(3), 
-                        Cat(d_tlb_hit_entry.ppn, ShiftRegister(io.d_vaddr(11, 0), 1, !io.d_stall)),
-                        Cat(d_tlb_hit_entry.ppn(19, 9), ShiftRegister(io.d_vaddr(20, 0), 1, !io.d_stall)))
+                        Cat(d_tlb_hit_entry.ppn, reg1(io.d_vaddr(11, 0), io.d_stall)),
+                        Cat(d_tlb_hit_entry.ppn(19, 9), reg1(io.d_vaddr(20, 0), io.d_stall)))
 
-    val d_tlb_hit_reg       = ShiftRegister(d_tlb_hit, 1, !io.d_stall)
+    val d_tlb_hit_reg       = reg1(d_tlb_hit, io.d_stall)
     val d_tlb_hit_entry_reg = d_tlb_hit_entry
-    val d_csr_plv_reg       = ShiftRegister(io.csr_plv, 1, !io.d_stall)
-    val d_rvalid_reg        = ShiftRegister(io.d_rvalid, 1, !io.d_stall)
-    val d_wvalid_reg        = ShiftRegister(io.d_wvalid, 1, !io.d_stall)
+    val d_csr_plv_reg       = reg1(io.csr_plv, io.d_stall)
+    val d_rvalid_reg        = reg1(io.d_rvalid, io.d_stall)
+    val d_wvalid_reg        = reg1(io.d_wvalid, io.d_stall)
     val d_paddr_reg         = io.d_tlb_paddr
     io.d_tlb_exception     := Mux(d_csr_plv_reg === 3.U && d_paddr_reg(31), 1.U(1.W) ## ADEM, 
                             Signal_Exception(d_tlb_hit_reg.asUInt.orR, d_tlb_hit_entry_reg, 

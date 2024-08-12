@@ -106,7 +106,7 @@ class CPU extends Module {
     val sb_cmt_hazard      = Wire(Bool())
     // ======================================
     // pre fetch
-    val icache_waiting = !icache.io.inst_valid || icache.io.has_cacop_IF
+    val icache_waiting = icache.io.cache_miss || icache.io.has_cacop_IF
     pc.io.stall         := fq.io.full || icache_waiting
     pc.io.pred_jump     := predict.io.pred_jump
     pc.io.pred_npc      := predict.io.pred_npc
@@ -181,7 +181,7 @@ class CPU extends Module {
     // IF-PD
     val insts_IF_PD = reg1(insts_IF,
         fq.io.full, //ip stall
-        predict_fail || !fq.io.full && (pd.io.pd_fix_en || !icache.io.inst_valid)) //ip flush
+        predict_fail || !fq.io.full && (pd.io.pd_fix_en || icache.io.cache_miss)) //ip flush
 
     // pre decode -------------------------------
     pd.io.insts := insts_IF_PD

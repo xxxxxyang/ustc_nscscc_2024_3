@@ -32,6 +32,7 @@ class Icache_IO extends Bundle {
     /* output */
     val inst                    = Output(Vec(2, UInt(32.W)))// 指令
     val inst_valid              = Output(Bool())            // 指令有效
+    val cache_miss              = Output(Bool())
 
     // AXI
     /* input */
@@ -255,6 +256,7 @@ class Icache extends Module{
     /* CPU */
     io.inst                     := rdata
     io.inst_valid               := inst_valid
+    io.cache_miss               := cache_miss_RM
     io.has_cacop_IF             := cacop_en_IF
 
     /* AXI */

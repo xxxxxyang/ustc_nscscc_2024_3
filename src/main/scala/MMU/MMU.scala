@@ -2,6 +2,7 @@ import chisel3._
 import chisel3.util._
 import TLB_Config._
 import TLB_Struct._
+import Util.reg1
 
 class MMU_IO extends Bundle {
     // from csr
@@ -94,7 +95,7 @@ class MMU extends Module{
     io.i_paddr           := Mux(csr_crmd_trans(0), i_vaddr, 
                             Mux(i_dmw0_hit, dmw0_reg(27, 25) ## i_vaddr(28, 0), 
                             Mux(i_dmw1_hit, dmw1_reg(27, 25) ## i_vaddr(28, 0), tlb.io.i_tlb_paddr)))
-    val i_exception_ne    = ShiftRegister(csr_crmd_trans(0) || i_dmw0_hit || i_dmw1_hit, 1, !io.i_stall)
+    val i_exception_ne    = reg1(csr_crmd_trans(0) || i_dmw0_hit || i_dmw1_hit, io.i_stall)
     io.i_exception       := Mux(i_exception_ne, 0.U, tlb.io.i_tlb_exception)
 
     // for dcache
