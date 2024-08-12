@@ -88,10 +88,10 @@ class MMU extends Module{
     val i_dmw1_hit = (!(i_vaddr(31, 29) ^ dmw1_reg(31, 29))) && dmw1_reg(3, 0)(io.csr_plv)
     val i_uncache_direct  = (i_vaddr(31,16) === "hbfaf".U) || (i_vaddr(31,16) === "h1faf".U)
     // val i_uncache_direct = !csr_crmd_trans(2)
-    val i_uncache         = Mux(csr_crmd_trans(0), i_uncache_direct, 
+    io.i_uncache         := Mux(csr_crmd_trans(0), i_uncache_direct, 
                             Mux(i_dmw0_hit, !dmw0_reg(4),
                             Mux(i_dmw1_hit, !dmw1_reg(4), tlb.io.i_tlb_uncache)))
-    val i_paddr           = Mux(csr_crmd_trans(0), i_vaddr, 
+    io.i_paddr           := Mux(csr_crmd_trans(0), i_vaddr, 
                             Mux(i_dmw0_hit, dmw0_reg(27, 25) ## i_vaddr(28, 0), 
                             Mux(i_dmw1_hit, dmw1_reg(27, 25) ## i_vaddr(28, 0), tlb.io.i_tlb_paddr)))
     val i_exception_ne    = ShiftRegister(csr_crmd_trans(0) || i_dmw0_hit || i_dmw1_hit, 1, !io.i_stall)
@@ -105,10 +105,10 @@ class MMU extends Module{
     // val d_uncache_direct = !csr_crmd_trans(4)
     val d_dmw0_hit  = (!(d_vaddr(31, 29) ^ dmw0_reg(31, 29))) && dmw0_reg(3, 0)(plv_reg)
     val d_dmw1_hit  = (!(d_vaddr(31, 29) ^ dmw1_reg(31, 29))) && dmw1_reg(3, 0)(plv_reg)
-    val d_paddr           = Mux(da_reg, d_vaddr,
+    io.d_paddr           := Mux(da_reg, d_vaddr,
                             Mux(d_dmw0_hit, dmw0_reg(27, 25) ## d_vaddr(28, 0), 
                             Mux(d_dmw1_hit, dmw1_reg(27, 25) ## d_vaddr(28, 0), tlb.io.d_tlb_paddr)))
-    val d_uncache         = Mux(da_reg, d_uncache_direct, 
+    io.d_uncache         := Mux(da_reg, d_uncache_direct, 
                             Mux(d_dmw0_hit, !dmw0_reg(4),
                             Mux(d_dmw1_hit, !dmw1_reg(4), tlb.io.d_tlb_uncache)))
     val d_exception_ne    = da_reg || d_dmw0_hit || d_dmw1_hit
