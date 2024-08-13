@@ -106,8 +106,8 @@ class CPU extends Module {
     val sb_cmt_hazard      = Wire(Bool())
     // ======================================
     // pre fetch
-    val icache_waiting = !icache.io.inst_valid || icache.io.has_cacop_IF
-    pc.io.stall         := fq.io.full || icache_waiting
+    val icache_waiting = icache.io.cache_miss || icache.io.has_cacop_IF
+    pc.io.stall         := fq.io.full || !icache.io.inst_valid || icache.io.has_cacop_IF
     pc.io.pred_jump     := predict.io.pred_jump
     pc.io.pred_npc      := predict.io.pred_npc
     pc.io.predict_fail  := predict_fail
@@ -181,7 +181,7 @@ class CPU extends Module {
     // IF-PD
     val insts_IF_PD = reg1(insts_IF,
         fq.io.full, //ip stall
-        predict_fail || !fq.io.full && (pd.io.pd_fix_en || !icache.io.inst_valid)) //ip flush
+        predict_fail || !fq.io.full && (pd.io.pd_fix_en || icache.io.cache_miss)) //ip flush
 
     // pre decode -------------------------------
     pd.io.insts := insts_IF_PD
@@ -460,7 +460,7 @@ class CPU extends Module {
     sb.io.em_stall := em_stall
 
     // MMU for Dcache
-    mmu.io.d_vaddr    := prj_data_rf3 + imm_rf3
+    mmu.io.d_vaddr    := reg1(dcache.io.addr_EX, re3_stall)
     mmu.io.d_rvalid   := inst_rf3.mem_type(4) & ~inst_rf3.mem_type(2)
     mmu.io.d_wvalid   := inst_rf3.mem_type(2)
     mmu.io.d_stall    := re3_stall
