@@ -79,7 +79,7 @@ class CPU extends Module {
     val iq3 = Module(new IssueQueue(IQ_SIZE(3), true))
     // RF
     val rf = Module(new RegFile)
-    val csr = Module(new CSR(30))
+    val csr = Module(new CSR_Reg(30))
     // EX
     val mdu = Module(new MDU)
 

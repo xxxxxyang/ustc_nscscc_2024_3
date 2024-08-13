@@ -43,7 +43,7 @@ class CSR_IO extends Bundle{
 
 
 
-class CSR(timer_width: Int) extends Module{
+class CSR_Reg(timer_width: Int) extends Module{
     val io = IO(new CSR_IO)
     val crmd = RegInit(8.U(32.W))
     val prmd = RegInit(0.U(32.W))
