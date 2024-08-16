@@ -141,12 +141,3 @@ class Predict extends Module {
     io.pred_npc         := Mux(btb_rdata(pred_hit_index).typ === RET, 
                             ras(top-1.U) + 4.U, btb_rdata(pred_hit_index).target ## 0.U(2.W))
 }
-
-
-// 后续优化方向：
-// 1. RAS增加递归、溢出计数器
-// 2. 修改BTB和RAS的更新逻辑
-// 3. BTB增加Agree机制（单缺失问题待解决）
-// 4. 使用多级BTB，参考《高性能》一书
-// 5. 使用分页索引BTB，参考Rocket处理器
-// 6. 使用自校正RAS，参考《高性能》提到的论文
